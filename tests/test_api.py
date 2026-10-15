@@ -43,3 +43,20 @@ def test_predict_endpoint_success():
     assert "telemetry" in data
     assert "peak_speed_m_s" in data["telemetry"]
     assert "peak_ke_joules" in data["telemetry"]
+
+
+def test_websocket_stream_endpoint():
+    """Verify WebSocket /ws/stream accepts frames and streams predictions."""
+    with client.websocket_connect("/ws/stream") as websocket:
+        # Send 16 frames of 21 landmarks to fill the warmup buffer (minimum 15 frames)
+        for i in range(16):
+            mock_landmarks = np.full((21, 3), 0.05 * i, dtype=np.float32).tolist()
+            websocket.send_json({"landmarks": mock_landmarks})
+
+        # Receive inference update from server
+        data = websocket.receive_json()
+        assert data["type"] == "inference_update"
+        assert "prediction" in data
+        assert "confidence" in data
+        assert "telemetry" in data
+

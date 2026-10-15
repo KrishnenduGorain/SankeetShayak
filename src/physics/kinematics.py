@@ -117,3 +117,6 @@ class KinematicsEngine:
             jerk_mag=jerk_mag,
             dt=dt,
         )
+
+    # Aliases for interface compatibility
+    compute_kinematics = analyze_trajectory

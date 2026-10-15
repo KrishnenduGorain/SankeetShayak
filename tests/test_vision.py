@@ -157,3 +157,60 @@ def test_stream_processor_on_video(tmp_path):
         assert "ke_joules" in telemetry
 
 
+def test_opengl_renderer_offscreen():
+    """Verify OpenGLHandRenderer renders 3D hand skeleton to offscreen buffer."""
+    from src.vision.opengl_renderer import OpenGLHandRenderer, check_opengl_support
+
+    support = check_opengl_support()
+    assert "headless_capable" in support
+    assert support["headless_capable"] is True
+
+    renderer = OpenGLHandRenderer(width=320, height=240, elevation=20.0, azimuth=30.0)
+    mock_lms = np.random.uniform(-0.2, 0.2, size=(21, 3)).astype(np.float64)
+    mock_vel = np.random.uniform(-0.5, 0.5, size=(21, 3)).astype(np.float64)
+
+    # Render without velocities
+    frame = renderer.render_hand_3d(mock_lms, show_grid=True, show_labels=True)
+    assert frame.shape == (240, 320, 3)
+    assert np.any(frame != renderer.background_color)
+
+    # Render with velocities
+    frame_with_vel = renderer.render_hand_3d(mock_lms, velocities=mock_vel, show_grid=True)
+    assert frame_with_vel.shape == (240, 320, 3)
+    assert np.any(frame_with_vel != renderer.background_color)
+
+
+def test_mediapipeline_on_video(tmp_path):
+    """Verify MediaPipeline extracts landmarks, computes telemetry, and supports rendering."""
+    import cv2
+    from src.vision.mediapipeline import MediaPipeline, process_source
+
+    video_path = tmp_path / "mediapipe_test.avi"
+    num_frames = 10
+    w, h = 320, 240
+    fourcc = cv2.VideoWriter_fourcc(*"MJPG")
+    out = cv2.VideoWriter(str(video_path), fourcc, 30.0, (w, h))
+    for _ in range(num_frames):
+        out.write(np.zeros((h, w, 3), dtype=np.uint8))
+    out.release()
+
+    pipeline = MediaPipeline(target_fps=30.0)
+    assert pipeline is not None
+
+    # Test process_source with rendering enabled
+    lms_arr, telemetry, rendered_frames = process_source(
+        source=str(video_path),
+        max_frames=8,
+        normalized=True,
+        render=True,
+        use_opengl=True,
+    )
+
+    assert isinstance(lms_arr, np.ndarray)
+    assert lms_arr.shape == (8, 21, 3)
+    assert "mean_speed" in telemetry
+    assert "kinetic_energy" in telemetry
+    assert telemetry["frame_count"] == 8
+    assert rendered_frames is not None
+    assert len(rendered_frames) == 8
+    assert rendered_frames[0].shape == (480, 640, 3)

@@ -1,0 +1,9 @@
+.git
+.github
+.venv
+venv
+web
+outputs
+**/__pycache__
+*.pyc
+models/*.joblib

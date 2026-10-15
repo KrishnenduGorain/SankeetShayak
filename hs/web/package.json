@@ -1,0 +1,13 @@
+{
+  "name": "handshayak",
+  "version": "1.0.0",
+  "description": "Physics-informed sign recognition prototype (browser, MediaPipe + rigid-body dynamics)",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "npx --yes serve . -l 3000",
+    "test": "node --test",
+    "deploy": "npx --yes vercel --prod"
+  },
+  "engines": { "node": ">=18" }
+}

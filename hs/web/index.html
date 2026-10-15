@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>HandShayak — Physics-Informed Sign Recognition</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%96%90%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1>🖐 HandShayak</h1>
+    <p class="sub">Biomechanical rigid-body dynamics for physics-informed sign recognition</p>
+  </div>
+  <div id="status" class="pill">Idle</div>
+</header>
+
+<main>
+  <section class="left">
+    <div class="stage" id="stage">
+      <video id="video" playsinline muted></video>
+      <canvas id="overlay" width="640" height="480"></canvas>
+      <div class="badge" id="badge" hidden></div>
+      <div class="msg" id="stageMsg">Start the camera, load a video, or run a simulation.<br><small>Everything runs locally in your browser — no video is uploaded.</small></div>
+    </div>
+
+    <div id="alert" class="alert" role="alert" hidden></div>
+
+    <div class="controls">
+      <button id="btnCamera" class="primary">▶ Start camera</button>
+      <button id="btnStop" disabled>■ Stop</button>
+      <label class="btn" for="fileInput">📁 Video file</label>
+      <input id="fileInput" type="file" accept="video/*" hidden>
+      <select id="cameraSelect" title="Camera"><option value="">Default camera</option></select>
+    </div>
+
+    <div class="controls sim">
+      <span class="lbl">Simulate (no camera needed):</span>
+      <button data-sim="0.3">Gentle 0.3 m/s</button>
+      <button data-sim="0.6">Moderate 0.6 m/s</button>
+      <button data-sim="1.2">Forceful 1.2 m/s</button>
+      <button id="simAll">Run all three</button>
+    </div>
+
+    <details class="settings">
+      <summary>Settings</summary>
+      <div class="grid">
+        <label><input type="checkbox" id="mirror" checked> Mirror camera view</label>
+        <label>Effort sensitivity <output id="sensVal">1.0×</output>
+          <input type="range" id="sens" min="0.5" max="2" step="0.1" value="1"></label>
+        <label>Hand mass (kg)
+          <input type="number" id="mass" min="0.1" max="1.5" step="0.05" value="0.40"></label>
+        <label>Inference engine
+          <select id="delegate"><option value="CPU">CPU (most compatible)</option><option value="GPU">GPU (faster, if supported)</option></select></label>
+      </div>
+    </details>
+  </section>
+
+  <section class="right">
+    <div class="cards">
+      <div class="card wide"><span>Shape (Model 1)</span><b id="t-shape">—</b></div>
+      <div class="card"><span>Hand speed</span><b id="t-speed">—</b><small>m/s</small></div>
+      <div class="card"><span>Acceleration</span><b id="t-accel">—</b><small>m/s²</small></div>
+      <div class="card"><span>Jerk</span><b id="t-jerk">—</b><small>m/s³</small></div>
+      <div class="card"><span>Kinetic energy</span><b id="t-ke">—</b><small>mJ</small></div>
+      <div class="card"><span>Inferred force</span><b id="t-force">—</b><small>N</small></div>
+      <div class="card"><span>Peak torque</span><b id="t-torque">—</b><small>mN·m</small></div>
+    </div>
+
+    <div class="chartbox"><h3>Hand speed (m/s)</h3><canvas id="chartSpeed"></canvas></div>
+    <div class="chartbox"><h3>Kinetic energy (mJ)</h3><canvas id="chartKE"></canvas></div>
+
+    <div class="result" id="result">
+      <span>Last detected movement</span>
+      <b id="sLabel">Waiting for a movement…</b>
+      <div class="bar"><i id="sBar"></i></div>
+      <small id="sMeta">Move your hand: a slow tap, then a sharp strike.</small>
+    </div>
+
+    <div class="logbox">
+      <div class="logh"><h3>Movement log (ablation view)</h3>
+        <div><button id="btnCsv" class="small">Export CSV</button> <button id="btnClear" class="small">Clear</button></div></div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>#</th><th>Model 1<br><small>shape only</small></th><th>Model 2<br><small>dynamics only</small></th><th>Model 3<br><small>shape + dynamics</small></th><th>Peak v</th><th>Peak KE</th><th>Jerk</th></tr></thead>
+        <tbody id="logBody"><tr class="empty"><td colspan="7">No movements yet</td></tr></tbody>
+      </table></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Force and torque are <em>inferred</em> from video motion and assumed anthropometric masses — relative measures, not direct muscle or contact forces.
+  Speeds use a hand-size scale (wrist→middle-MCP ≈ 9.5 cm) and are strongest for motion across the image plane.
+</footer>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

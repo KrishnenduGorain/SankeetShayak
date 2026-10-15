@@ -166,6 +166,14 @@ class HandLandmarkDetector:
         self.frame_counter += 1
         return frame_result
 
+    def detect_frame(
+        self,
+        frame_bgr: np.ndarray,
+        timestamp_sec: Optional[float] = None
+    ) -> LandmarkFrame:
+        """Alias for process_frame."""
+        return self.process_frame(frame_bgr, timestamp_sec=timestamp_sec)
+
     @staticmethod
     def normalize_coordinates(coords: np.ndarray) -> np.ndarray:
         """Normalize coordinates for scale and translation invariance.

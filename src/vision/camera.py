@@ -178,6 +178,11 @@ class CrossPlatformCamera:
             return False, None
         return self.cap.read()
 
+    @property
+    def fps(self) -> float:
+        """Frame rate property alias."""
+        return self.get_fps()
+
     def get_fps(self) -> float:
         """Get capture frame rate."""
         if not self.is_opened():
@@ -217,6 +222,11 @@ class CrossPlatformCamera:
                 break
             yield idx, frame
             idx += 1
+
+    def stream(self, max_frames: Optional[int] = None) -> Generator[np.ndarray, None, None]:
+        """Yield raw frames sequentially without index for direct iteration."""
+        for _, frame in self.frames(max_frames=max_frames):
+            yield frame
 
     def __enter__(self) -> "CrossPlatformCamera":
         return self.open()

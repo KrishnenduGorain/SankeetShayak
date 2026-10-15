@@ -7,9 +7,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app
 
-# Install system dependencies for OpenCV and MediaPipe
+# Install system dependencies for OpenCV, OpenGL/EGL, and MediaPipe
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
+    libgl1-mesa-dev \
+    libegl1 \
     libglib2.0-0 \
     curl \
     && rm -rf /var/lib/apt/lists/*

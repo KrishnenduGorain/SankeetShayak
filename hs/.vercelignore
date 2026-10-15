@@ -1,0 +1,10 @@
+src
+tests
+scripts
+models
+outputs
+*.py
+requirements*.txt
+pytest.ini
+Dockerfile
+.github
