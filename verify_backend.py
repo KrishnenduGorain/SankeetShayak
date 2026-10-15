@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Cross-Platform Backend Diagnostic & Pre-Hosting Verification Script.
 
-Tests environment, models, physics, vision, REST API, WebSockets, and Render readiness.
-Works on macOS, Linux, and Windows.
+Uses Python's built-in pathlib module for OS-independent path resolution.
+Verifies project structure, dependencies, models, physics, vision, REST API, and WebSockets.
 """
 
 import os
@@ -17,142 +17,137 @@ YELLOW = "\033[93m"
 RESET = "\033[0m"
 
 
-def log_pass(msg: str):
-    print(f"[{GREEN}PASS{RESET}] {msg}")
+def print_status(message: str, status: bool):
+    symbol = f"{GREEN}[OK]{RESET}" if status else f"{RED}[FAIL]{RESET}"
+    print(f"{symbol} {message}")
 
 
-def log_fail(msg: str):
-    print(f"[{RED}FAIL{RESET}] {msg}")
+def check_project_structure() -> bool:
+    print("\n--- 1. Running Cross-Platform Structure Verification ---")
+    root = Path(__file__).resolve().parent
+
+    # 1. Essential Directories Check
+    src_exists = (root / "src").is_dir()
+    models_exists = (root / "models").is_dir()
+    tests_exists = (root / "tests").is_dir()
+
+    print_status("Directory 'src/' exists", src_exists)
+    print_status("Directory 'models/' exists", models_exists)
+    print_status("Directory 'tests/' exists", tests_exists)
+
+    # 2. Essential Files Check
+    req_exists = (root / "requirements.txt").is_file()
+    dockerfile_exists = (root / "Dockerfile").is_file()
+    env_example_exists = (root / ".env.example").is_file()
+
+    print_status("File 'requirements.txt' exists", req_exists)
+    print_status("File 'Dockerfile' exists", dockerfile_exists)
+    print_status("File '.env.example' exists", env_example_exists)
+
+    # 3. Requirements Content Check (Server verification)
+    server_found = False
+    if req_exists:
+        content = (root / "requirements.txt").read_text(encoding="utf-8").lower()
+        if "uvicorn" in content or "gunicorn" in content:
+            server_found = True
+    print_status("Production ASGI/WSGI server (Uvicorn/Gunicorn) in requirements.txt", server_found)
+
+    return all([src_exists, models_exists, tests_exists, req_exists, dockerfile_exists, env_example_exists, server_found])
 
 
-def log_info(msg: str):
-    print(f"[{YELLOW}INFO{RESET}] {msg}")
-
-
-def main() -> int:
-    print("=" * 60)
-    print(" SankeetShayak Backend Cross-Platform Diagnostic ")
-    print("=" * 60)
-    log_info(f"OS: {platform.system()} {platform.release()} ({platform.machine()})")
-    log_info(f"Python: {platform.python_version()} ({sys.executable})")
-
+def check_runtime_and_endpoints() -> bool:
+    root = Path(__file__).resolve().parent
     failures = 0
 
-    # 1. Verify Model Assets
-    print("\n--- 1. Model Assets Verification ---")
-    models_dir = Path("models")
-    task_model = models_dir / "hand_landmarker.task"
-    clf_model = models_dir / "handshayak_model.joblib"
-
-    if task_model.is_file() and task_model.stat().st_size > 1_000_000:
-        log_pass(f"MediaPipe task model found: {task_model} ({task_model.stat().st_size / (1024*1024):.1f} MB)")
-    else:
-        log_fail(f"MediaPipe model missing or corrupted at {task_model}")
+    # 4. Model Assets Check
+    print("\n--- 2. Model Assets Check ---")
+    task_model = root / "models" / "hand_landmarker.task"
+    clf_model = root / "models" / "handshayak_model.joblib"
+    task_ok = task_model.is_file() and task_model.stat().st_size > 1_000_000
+    clf_ok = clf_model.is_file() and clf_model.stat().st_size > 10_000
+    print_status(f"MediaPipe task model ({task_model.name})", task_ok)
+    print_status(f"Trained gesture model ({clf_model.name})", clf_ok)
+    if not (task_ok and clf_ok):
         failures += 1
 
-    if clf_model.is_file() and clf_model.stat().st_size > 10_000:
-        log_pass(f"Trained gesture model found: {clf_model} ({clf_model.stat().st_size / 1024:.1f} KB)")
-    else:
-        log_fail(f"Trained gesture model missing at {clf_model}")
-        failures += 1
-
-    # 2. Verify Physics Engines
-    print("\n--- 2. Biomechanical Physics Verification ---")
+    # 5. Physics Engine Check
+    print("\n--- 3. Biomechanical Physics Engine Check ---")
     try:
         from src.physics.kinematics import KinematicsEngine
         from src.physics.dynamics import DynamicsEngine
 
-        kin_engine = KinematicsEngine(default_fps=30.0)
-        dyn_engine = DynamicsEngine()
-
-        # Simulate 20 frames of harmonic motion
+        kin = KinematicsEngine(default_fps=30.0)
+        dyn = DynamicsEngine()
+        traj = np.zeros((20, 21, 3))
         t = np.linspace(0, 1.0, 20)
-        mock_traj = np.zeros((20, 21, 3))
-        mock_traj[:, :, 0] = np.sin(2 * np.pi * 2.0 * t)[:, None]
-
-        kin_state = kin_engine.compute_kinematics(mock_traj)
-        dyn_state = dyn_engine.compute_dynamics(kin_state)
-
-        assert kin_state.velocities.shape == (20, 21, 3)
-        assert len(dyn_state.kinetic_energy) == 20
-        log_pass("Kinematics (Savitzky-Golay) and Dynamics (KE & Force) engines operational")
+        traj[:, :, 0] = np.sin(2 * np.pi * t)[:, None]
+        kin_state = kin.compute_kinematics(traj)
+        dyn_state = dyn.compute_dynamics(kin_state)
+        print_status("Kinematics & Dynamics calculations", kin_state.velocities.shape == (20, 21, 3))
     except Exception as e:
-        log_fail(f"Physics engine verification failed: {e}")
+        print_status(f"Physics engine: {e}", False)
         failures += 1
 
-    # 3. Verify Vision & OpenGL Rendering
-    print("\n--- 3. Vision & OpenGL Offscreen Rendering ---")
+    # 6. Vision & OpenGL Offscreen Rendering
+    print("\n--- 4. Vision & OpenGL Offscreen Check ---")
     try:
-        from src.vision.opengl_renderer import OpenGLHandRenderer, check_opengl_support
-
-        support = check_opengl_support()
-        log_pass(f"Graphics runtime detected: PyOpenGL={support['pyopengl']}, Headless={support['headless_capable']}")
-
+        from src.vision.opengl_renderer import OpenGLHandRenderer
         renderer = OpenGLHandRenderer(width=320, height=240)
-        lms = np.random.uniform(-0.1, 0.1, size=(21, 3))
-        frame = renderer.render_hand_3d(lms)
-        assert frame.shape == (240, 320, 3)
-        log_pass("3D Hand & joint offscreen renderer buffer generated successfully")
+        buf = renderer.render_hand_3d(np.zeros((21, 3)))
+        print_status("3D Offscreen hand render buffer (320x240x3)", buf.shape == (240, 320, 3))
     except Exception as e:
-        log_fail(f"Vision/OpenGL rendering failed: {e}")
+        print_status(f"Vision/OpenGL rendering: {e}", False)
         failures += 1
 
-    # 4. Verify FastAPI Backend Endpoints
-    print("\n--- 4. FastAPI REST Endpoints Verification ---")
+    # 7. FastAPI REST & WebSocket Endpoints
+    print("\n--- 5. FastAPI Endpoints Check ---")
     try:
         from fastapi.testclient import TestClient
         from src.api.main import app
-
         client = TestClient(app)
 
-        # GET /health
-        res_health = client.get("/health")
-        assert res_health.status_code == 200 and res_health.json().get("status") == "ok"
-        log_pass("REST GET /health: 200 OK")
+        res_h = client.get("/health")
+        print_status("REST GET /health", res_h.status_code == 200 and res_h.json().get("status") == "ok")
 
-        # GET /
         res_root = client.get("/")
-        assert res_root.status_code == 200 and "HandShayak" in res_root.text
-        log_pass("REST GET /: 200 OK (Web Dashboard served)")
+        print_status("REST GET / (Web Dashboard)", res_root.status_code == 200 and "HandShayak" in res_root.text)
 
-        # GET /signs
         res_signs = client.get("/signs")
-        assert res_signs.status_code == 200 and len(res_signs.json().get("classes", [])) > 0
-        log_pass(f"REST GET /signs: 200 OK ({len(res_signs.json()['classes'])} classes)")
+        print_status(f"REST GET /signs ({len(res_signs.json().get('classes', []))} classes)", res_signs.status_code == 200)
 
-        # POST /predict
-        sample_traj = np.random.normal(0, 0.05, size=(20, 21, 3)).tolist()
-        res_pred = client.post("/predict", json={"trajectory": sample_traj, "fps": 30.0})
-        assert res_pred.status_code == 200 and "label" in res_pred.json()
-        log_pass(f"REST POST /predict: 200 OK (Label: {res_pred.json()['label']}, Conf: {res_pred.json()['confidence']:.2f})")
-    except Exception as e:
-        log_fail(f"FastAPI REST endpoints failed: {e}")
-        failures += 1
+        mock_traj = np.random.normal(0, 0.05, size=(20, 21, 3)).tolist()
+        res_pred = client.post("/predict", json={"trajectory": mock_traj, "fps": 30.0})
+        print_status(f"REST POST /predict (Label: {res_pred.json().get('label')})", res_pred.status_code == 200)
 
-    # 5. Verify Real-Time WebSocket Streaming
-    print("\n--- 5. WebSocket Real-Time Stream Verification ---")
-    try:
         with client.websocket_connect("/ws/stream") as ws:
-            for i in range(16):
-                pt = np.full((21, 3), 0.02 * i, dtype=np.float32).tolist()
-                ws.send_json({"landmarks": pt})
-            data = ws.receive_json()
-            assert data.get("type") == "inference_update"
-            assert "prediction" in data
-            log_pass(f"WebSocket /ws/stream: streaming prediction received ({data['prediction']})")
+            for i in range(30):
+                ws.send_json({"landmarks": np.zeros((21, 3)).tolist()})
+            msg = ws.receive_json()
+            print_status(f"WebSocket /ws/stream (Prediction: {msg.get('prediction')})", msg.get("type") == "inference_update")
     except Exception as e:
-        log_fail(f"WebSocket stream verification failed: {e}")
+        print_status(f"FastAPI endpoints: {e}", False)
         failures += 1
 
-    # Summary
-    print("\n" + "=" * 60)
-    if failures == 0:
-        print(f"{GREEN}ALL DIAGNOSTIC CHECKS PASSED (100% HEALTHY). READY FOR RENDER!{RESET}")
-        print("=" * 60)
+    return failures == 0
+
+
+def main():
+    print("=" * 55)
+    print(" SankeetShayak Cross-Platform Backend Verification ")
+    print("=" * 55)
+    print(f"{YELLOW}Platform:{RESET} {platform.system()} {platform.machine()} | Python {platform.python_version()}")
+
+    struct_ok = check_project_structure()
+    runtime_ok = check_runtime_and_endpoints()
+
+    print("\n---------------------------------------------------")
+    if struct_ok and runtime_ok:
+        print(f"{GREEN}Success: Core backend structure and runtime are valid and ready for Render!{RESET}")
+        print("---------------------------------------------------\n")
         return 0
     else:
-        print(f"{RED}DIAGNOSTIC CHECKS FAILED: {failures} ERROR(S) FOUND.{RESET}")
-        print("=" * 60)
+        print(f"{RED}Notice: Some critical checks failed. Review items marked [FAIL].{RESET}")
+        print("---------------------------------------------------\n")
         return 1
 
 

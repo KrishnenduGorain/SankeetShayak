@@ -1,7 +1,8 @@
 """Pydantic data schemas for REST API and WebSocket streams."""
 
 from typing import Dict, List, Optional
-from pydantic import BaseModel, Field
+import math
+from pydantic import BaseModel, Field, field_validator
 
 
 class HealthResponse(BaseModel):
@@ -23,6 +24,21 @@ class TrajectoryPredictRequest(BaseModel):
     )
     fps: float = Field(default=30.0, ge=1.0, le=120.0)
 
+    @field_validator("trajectory")
+    @classmethod
+    def validate_trajectory(cls, v: List[List[List[float]]]) -> List[List[List[float]]]:
+        if len(v) < 15:
+            raise ValueError(f"Trajectory must have at least 15 frames for physical analysis, got {len(v)}")
+        for i, frame in enumerate(v):
+            if len(frame) != 21:
+                raise ValueError(f"Frame {i} must have exactly 21 landmarks, got {len(frame)}")
+            for j, pt in enumerate(frame):
+                if len(pt) != 3:
+                    raise ValueError(f"Landmark {j} in frame {i} must have [x, y, z] coordinates, got {len(pt)}")
+                if any(math.isnan(coord) or math.isinf(coord) for coord in pt):
+                    raise ValueError(f"NaN or Inf detected at frame {i}, joint {j}")
+        return v
+
 
 class TelemetryData(BaseModel):
     peak_speed_m_s: float
@@ -39,6 +55,8 @@ class PredictResponse(BaseModel):
     confidence: float
     probabilities: Dict[str, float]
     telemetry: TelemetryData
+    is_reliable: bool = True
+    warnings: List[str] = Field(default_factory=list)
 
 
 class StreamFramePayload(BaseModel):
