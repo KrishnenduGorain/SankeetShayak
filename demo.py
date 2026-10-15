@@ -1,33 +1,27 @@
-"""Interactive Demo Runner for SankeetShayak / HandShayak.
+"""Interactive Demo for SankeetShayak / HandShayak.
 
-Runs:
-1. Simulation Demo: Tests physics engine, ablation benchmarking, and sign inference.
-2. Live Webcam Stream: Real-time hand tracking, velocity arrows, and physics telemetry HUD.
-3. Video File Analysis: Processes a pre-recorded sign video and outputs annotated telemetry.
-
-Cross-platform compatible with macOS, Windows, and Linux.
+Runs either:
+1. An offline simulation demonstrating physics features and classification on synthetic gestures.
+2. A live webcam visualizer overlaying 3D hand landmarks and instantaneous physics telemetry.
 
 Usage:
     # Run simulation demo (works anywhere, headless/no camera required):
     python demo.py --simulate
 
-    # Run live webcam tracking with real-time physics HUD:
+    # Run live webcam tracking:
     python demo.py --webcam
-
-    # Run on a video file:
-    python demo.py --video path/to/gesture.mp4
 """
 
 import argparse
-from pathlib import Path
 import sys
+import time
 import cv2
 import numpy as np
 
 from src.data.collector import GestureDatasetBuilder
 from src.models.predictor import GesturePredictor
-from src.vision.camera import CrossPlatformCamera, get_camera_permission_guidance, probe_available_cameras
-from src.vision.stream_processor import StreamProcessor
+from src.vision.detector import HandLandmarkDetector
+from src.vision.visualizer import HandVisualizer
 
 
 def run_simulation_demo():
@@ -59,56 +53,110 @@ def run_simulation_demo():
     print("=" * 65)
 
 
-def run_stream_demo(source, window_title="SankeetShayak Live Telemetry"):
-    print(f"\nInitializing stream from source: {source}...")
-    print("Press 'q' in the video window to exit.")
+def get_working_camera(preferred_index: int = 0):
+    """Probe for available cameras using macOS AVFoundation backend."""
+    # Try preferred index with AVFoundation first
+    cap = cv2.VideoCapture(preferred_index, cv2.CAP_AVFOUNDATION)
+    if cap.isOpened():
+        return cap, preferred_index
 
-    processor = StreamProcessor(fps=30.0, enable_predictor=True)
+    cap.release()
 
-    try:
-        # Use generator to process frames
-        for frame_idx, frame, telemetry in processor.process_source(
-            source=source,
-            display=True,
-            window_title=window_title,
-        ):
-            # Periodically print stats to terminal
-            if frame_idx % 30 == 0 and telemetry["speed_m_s"] > 0.05:
-                print(
-                    f"[Frame {frame_idx:04d}] "
-                    f"Speed: {telemetry['speed_m_s']:.2f} m/s | "
-                    f"KE: {telemetry['ke_joules']:.4f} J | "
-                    f"Force: {telemetry['force_n']:.2f} N"
-                )
-    except RuntimeError as e:
+    # Probe indices 0, 1, 2
+    for idx in [0, 1, 2]:
+        if idx == preferred_index:
+            continue
+        test_cap = cv2.VideoCapture(idx, cv2.CAP_AVFOUNDATION)
+        if test_cap.isOpened():
+            ret, _ = test_cap.read()
+            if ret:
+                return test_cap, idx
+            test_cap.release()
+
+    # Fallback to default backend
+    fallback_cap = cv2.VideoCapture(preferred_index)
+    if fallback_cap.isOpened():
+        return fallback_cap, preferred_index
+
+    fallback_cap.release()
+    return None, preferred_index
+
+
+def run_webcam_demo(camera_index: int = 0):
+    print("\nStarting live webcam stream... Press 'q' to exit.")
+    cap, actual_idx = get_working_camera(camera_index)
+
+    if cap is None or not cap.isOpened():
         print("\n" + "=" * 65)
-        print("❌ CAMERA / STREAM ERROR:")
-        print(str(e))
+        print("❌ CAMERA ACCESS ERROR: OpenCV could not open the webcam.")
+        print("=" * 65)
+        print("This is almost always a macOS Privacy Permission issue.\n")
+        print("To fix this on your Mac:")
+        print("1. Open: System Settings (Apple Menu  > System Settings)")
+        print("2. Go to: Privacy & Security > Camera")
+        print("3. Find your Terminal application (e.g. Terminal, iTerm2, VS Code,")
+        print("   Cursor, or your IDE) and TOGGLE THE SWITCH TO ON (Enabled).")
+        print("4. If your terminal is already running, restart it and re-run:")
+        print("     python demo.py --webcam")
+        print("\nAlternative: If you have an external webcam or Continuity Camera, try:")
+        print("     python demo.py --webcam --cam-index 1")
         print("=" * 65)
         sys.exit(1)
+
+    print(f"✅ Camera initialized successfully on index {actual_idx}!")
+    detector = HandLandmarkDetector()
+    visualizer = HandVisualizer()
+    t0 = time.perf_counter()
+
+    try:
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            # Flip horizontally for natural mirror feel
+            frame = cv2.flip(frame, 1)
+
+            res = detector.process_frame(frame, time.perf_counter() - t0)
+            if res.detected and res.raw_landmarks is not None:
+                frame = visualizer.draw_skeleton(frame, res.raw_landmarks)
+                cv2.putText(
+                    frame,
+                    f"Hand: {res.handedness} ({res.confidence * 100:.0f}%)",
+                    (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.8,
+                    (0, 255, 0),
+                    2,
+                )
+            else:
+                cv2.putText(
+                    frame,
+                    "No hand detected",
+                    (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.8,
+                    (0, 0, 255),
+                    2,
+                )
+
+            cv2.imshow("SankeetShayak Live Vision", frame)
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
     finally:
-        processor.close()
+        cap.release()
+        cv2.destroyAllWindows()
+        detector.close()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="SankeetShayak Demo Runner")
     parser.add_argument("--simulate", action="store_true", help="Run simulated physics and classification demo")
-    parser.add_argument("--webcam", action="store_true", help="Run live webcam hand tracking & physics HUD")
+    parser.add_argument("--webcam", action="store_true", help="Run live webcam hand tracking")
     parser.add_argument("--cam-index", type=int, default=0, help="Camera device index (default: 0)")
-    parser.add_argument("--video", type=str, default=None, help="Path to video file to analyze")
-    parser.add_argument("--probe-cameras", action="store_true", help="Scan and list working cameras on system")
     args = parser.parse_args()
 
-    if args.probe_cameras:
-        print("Scanning for connected camera devices...")
-        cams = probe_available_cameras()
-        print(f"Available camera index(es): {cams}")
-        if not cams:
-            print("\nTroubleshooting Guidance:")
-            print(get_camera_permission_guidance())
-    elif args.video:
-        run_stream_demo(source=args.video, window_title=f"SankeetShayak: {Path(args.video).name}")
-    elif args.webcam:
-        run_stream_demo(source=args.cam_index, window_title="SankeetShayak Webcam Telemetry")
+    if args.webcam:
+        run_webcam_demo(camera_index=args.cam_index)
     else:
         run_simulation_demo()
