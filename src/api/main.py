@@ -26,11 +26,12 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# Enable CORS for frontend integration (e.g. Vite / React dev servers)
+# Enable CORS for frontend integration (Vercel, Netlify, Render, Localhost)
+allow_all = "*" in settings.CORS_ORIGINS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
+    allow_origins=["*"] if allow_all else settings.CORS_ORIGINS,
+    allow_credentials=not allow_all,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -97,3 +98,12 @@ async def websocket_stream_endpoint(websocket: WebSocket):
         stream_manager.disconnect(websocket)
     except Exception as e:
         stream_manager.disconnect(websocket)
+
+
+# Mount static web frontend if available (e.g. for Render or local web dashboard)
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+
+_web_dir = Path(__file__).resolve().parent.parent.parent / "web"
+if _web_dir.is_dir() and (_web_dir / "index.html").is_file():
+    app.mount("/", StaticFiles(directory=str(_web_dir), html=True), name="static")

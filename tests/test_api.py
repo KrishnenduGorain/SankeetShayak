@@ -17,6 +17,14 @@ def test_health_check_endpoint():
     assert data["project"] == "SankeetShayak"
 
 
+def test_root_serves_frontend():
+    """Verify root / serves HTML dashboard."""
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "text/html" in response.headers.get("content-type", "")
+    assert "HandShayak" in response.text
+
+
 def test_signs_list_endpoint():
     """Verify /signs returns the list of recognizable gestures."""
     response = client.get("/signs")

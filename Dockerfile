@@ -22,17 +22,14 @@ COPY requirements.txt .
 # Install Python packages
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code and model assets
+# Copy application code, static web assets, and model assets
 COPY src/ ./src/
 COPY models/ ./models/
+COPY web/ ./web/
 COPY demo.py .
 
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
-
-# Expose FastAPI port
+# Expose default port (Render overrides with $PORT dynamically)
 EXPOSE 8000
 
-# Default command: start FastAPI backend with WebSocket streaming
-CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Default command: support Render $PORT or fallback to 8000
+CMD ["sh", "-c", "uvicorn src.api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
