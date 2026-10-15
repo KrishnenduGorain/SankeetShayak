@@ -107,3 +107,14 @@ from fastapi.staticfiles import StaticFiles
 _web_dir = Path(__file__).resolve().parent.parent.parent / "web"
 if _web_dir.is_dir() and (_web_dir / "index.html").is_file():
     app.mount("/", StaticFiles(directory=str(_web_dir), html=True), name="static")
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "src.api.main:app",
+        host=settings.HOST,
+        port=settings.PORT,
+        log_level=settings.LOG_LEVEL.lower(),
+        reload=(settings.ENVIRONMENT == "development"),
+    )

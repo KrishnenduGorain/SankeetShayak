@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy dependency specifications
+# Copy dependency specifications first for optimal Docker layer caching
 COPY requirements.txt .
 
 # Install Python packages
@@ -27,6 +27,14 @@ COPY src/ ./src/
 COPY models/ ./models/
 COPY web/ ./web/
 COPY demo.py .
+
+# Create non-root user for security best practices
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
 # Expose default port (Render overrides with $PORT dynamically)
 EXPOSE 8000

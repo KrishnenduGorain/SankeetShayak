@@ -1,17 +1,38 @@
-__pycache__
-*.pyc
-*.pyo
-*.pyd
+# Git & GitHub
+.git
+.gitignore
+.github/
+
+# Python & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
 .Python
 env/
 venv/
-.pytest_cache
+venv.bak/
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+
+# Testing & Coverage
+.pytest_cache/
 .coverage
-htmlcov
-.git
-.gitignore
-*.md
+htmlcov/
+tests/
+
+# Temporary & Media Files
 .DS_Store
+Thumbs.db
 *.mp4
 *.avi
 *.mov
+*.zip
+*.tar.gz
+
+# Frontend & Documentation
+*.md
+node_modules/
