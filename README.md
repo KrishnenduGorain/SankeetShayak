@@ -1,4 +1,4 @@
-# Project HandShayak: Physics-Informed Sign-Language Recognition 
+# Project SankeetShayak: Physics-Informed Sign-Language Recognition 
 
 > **HandShayak** (Hand Helper) is a physics-informed AI system that models the human hand as a biomechanical rigid-body linkage to improve sign-language recognition.
 
