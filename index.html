@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#050f1f">
+  <meta name="description" content="Sankeet Shayak — sign-language recognition that reads both hand shape and hand motion, using hand landmarks, kinematics and machine learning.">
+  <title>Sankeet Shayak — Sign Recognition from Shape &amp; Motion</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23050f1f'/%3E%3Cpath d='M9 19c2-6 4-8 7-8s5 2 7 8' fill='none' stroke='%2331d0e2' stroke-width='2.5' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='11' r='2.4' fill='%2331d0e2'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+Devanagari:wght@400;600&family=Noto+Sans+Bengali:wght@400;600&display=swap">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="integration.css">
+</head>
+<body class="intro-active">
+  <a class="skip-link" href="#demo">Skip to demo</a>
+  <div class="scroll-progress" aria-hidden="true"></div>
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="cursor-glow" aria-hidden="true"></div>
+  <div class="cursor-ring" aria-hidden="true"></div>
+  <div class="cursor-dot" aria-hidden="true"></div>
+
+  <!-- ============ INTRO ============ -->
+  <div id="intro" role="dialog" aria-modal="true" aria-label="Sankeet Shayak introduction" data-scene="1">
+    <div class="intro-veil" aria-hidden="true"></div>
+    <canvas id="intro-canvas" aria-hidden="true"></canvas>
+    <div class="intro-center">
+      <p class="intro-kicker">Hand shape <b>+</b> Hand motion</p>
+      <h2 class="intro-title" aria-label="Sankeet Shayak">
+        <span class="word" aria-hidden="true">Sankeet</span>
+        <span class="word cyan" aria-hidden="true">Shayak</span>
+      </h2>
+      <p class="intro-tag">Where signs meet intelligence</p>
+    </div>
+    <div class="intro-footer">
+      <div class="intro-status" aria-hidden="true"><span id="intro-stage">INITIALIZING</span><span id="intro-pct">0%</span></div>
+      <div class="intro-bar" aria-hidden="true"><span></span></div>
+      <button type="button" class="skip-intro" id="skip-intro">Skip Intro <kbd class="skip-kbd">ESC</kbd> <span aria-hidden="true">→</span></button>
+    </div>
+  </div>
+
+  <div id="app">
+    <header class="navbar" id="navbar">
+      <a class="brand" href="#home" aria-label="Sankeet Shayak home">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".5"/><path d="M9 19c2-6 4-8 7-8s5 2 7 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="16" cy="11" r="2.2" fill="currentColor"/></svg>
+        <span>Sankeet <em>Shayak</em></span>
+      </a>
+      <nav id="site-nav" aria-label="Main navigation">
+        <a href="#demo">Demo</a>
+        <a href="#pipeline">How it works</a>
+        <a href="#physics">Motion &amp; physics</a>
+        <a href="#compare">Approaches</a>
+        <a href="#project">Project</a>
+        <button class="credits-btn credits-btn--menu" type="button" data-credits-open aria-haspopup="dialog" aria-controls="credits-modal">Project Credits</button>
+      </nav>
+      <button class="credits-btn credits-btn--bar" type="button" data-credits-open aria-haspopup="dialog" aria-controls="credits-modal">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 2c-2.8 0-5 1.6-5 3.5V19h10v-2.5C13 14.6 10.8 13 8 13zm8-2a3 3 0 1 0-.9-5.86A4.97 4.97 0 0 1 16 8c0 1.1-.36 2.1-.96 2.92.3.05.6.08.96.08zm.5 2c-.5 0-1 .05-1.45.15 1.1.9 1.95 2.1 1.95 3.35V19h5v-2.5c0-1.9-2.2-3.5-5.5-3.5z" fill="currentColor"/></svg>
+        Project Credits
+      </button>
+      <button class="fx-toggle" id="fx-toggle" type="button" aria-pressed="true" title="Toggle visual effects">FX <i aria-hidden="true"></i></button>
+      <button class="menu-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="site-nav">
+        <span></span><span></span><span></span>
+      </button>
+    </header>
+
+    <!-- ============ HERO ============ -->
+    <main class="hero" id="home">
+      <video class="hero-video" muted loop playsinline preload="auto" aria-hidden="true">
+        <source src="handshake.webm" type="video/webm">
+        <source src="handshake.mp4" type="video/mp4">
+      </video>
+      <div class="video-shade"></div>
+      <div class="ambient-glow"></div>
+      <div class="hero-grid" aria-hidden="true"></div>
+      <canvas id="hero-hand" aria-hidden="true"></canvas>
+      <div class="hud" aria-hidden="true">
+        <span class="hud-side">Shape × Motion × Intelligence</span>
+        <span class="hud-br"><i></i> T+<b id="hud-time">00:00:00</b> · MODEL OFFLINE · UI DECORATION</span>
+        <span class="hud-tr">SYS // SANKEET.SHAYAK</span>
+      </div>
+
+
+      <section class="hero-copy">
+        <div class="eyebrow reveal-hero"><span class="pulse-dot"></span> Research prototype · classifier validation pending</div>
+        <h1 class="reveal-hero" aria-label="Signs have a shape and a motion."><span class="line"><span>Signs have</span></span><span class="line"><span>a <span class="grad">shape</span> and</span></span><span class="line"><span>a <span class="grad">motion.</span></span></span></h1>
+        <p class="reveal-hero">Sankeet Shayak recognises sign language by reading hand geometry and the physics of how the hand moves — an interpretable pipeline, not a black box.</p>
+        <div class="actions reveal-hero">
+          <a class="button button-primary" href="#demo">Try the Demo <span aria-hidden="true">→</span></a>
+          <a class="button button-outline" href="#pipeline">See how it works</a>
+        </div>
+        <ul class="hero-stats reveal-hero" aria-label="Key ideas">
+          <li><b data-count="21">21</b><span>hand landmarks</span></li>
+          <li><b data-count="3">3</b><span>motion signals</span></li>
+          <li><b data-count="6">6</b><span>pipeline stages</span></li>
+        </ul>
+      </section>
+
+      <a class="scroll-note" href="#demo"><span class="scroll-line"></span> Scroll</a>
+    </main>
+
+    <div class="marquee" aria-hidden="true"><div class="marquee-track"><span>Hand landmarks</span><i>◆</i><span>Joint angles</span><i>◆</i><span>Velocity</span><i>◆</i><span>Acceleration</span><i>◆</i><span>Jerk</span><i>◆</i><span>Kinetic energy</span><i>◆</i><span>MediaPipe Hands</span><i>◆</i><span>Interpretable features</span><i>◆</i><span>Shape × Motion</span><i>◆</i><span>Hand landmarks</span><i>◆</i><span>Joint angles</span><i>◆</i><span>Velocity</span><i>◆</i><span>Acceleration</span><i>◆</i><span>Jerk</span><i>◆</i><span>Kinetic energy</span><i>◆</i><span>MediaPipe Hands</span><i>◆</i><span>Interpretable features</span><i>◆</i><span>Shape × Motion</span><i>◆</i></div></div>
+
+    <!-- ============ DEMO ============ -->
+    <section class="section" id="demo" aria-labelledby="demo-title">
+      <div class="wrap">
+        <header class="section-head reveal">
+          <p class="kicker">01 · Live demo</p>
+          <h2 id="demo-title">Show a sign to the camera.</h2>
+          <p>Start your webcam or upload a short sample clip. The interface is ready for the recognition model — until it is connected, no prediction is shown.</p>
+        </header>
+
+        <div class="demo-grid">
+          <div class="panel stage-panel reveal">
+            <div class="stage" id="stage" data-state="idle">
+              <video id="cam" playsinline muted aria-label="Camera or sample video preview"></video>
+              <div class="stage-empty" id="stage-empty">
+                <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M20 14h24a6 6 0 0 1 6 6v24a6 6 0 0 1-6 6H20a6 6 0 0 1-6-6V20a6 6 0 0 1 6-6z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="32" cy="32" r="8" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="32" cy="32" r="2.5" fill="currentColor"/></svg>
+                <p>Camera is off</p>
+                <small>Start the camera or upload a clip to begin</small>
+              </div>
+              <div class="stage-busy" id="stage-busy" hidden><span class="spinner"></span> Requesting camera…</div>
+              <div class="scan" aria-hidden="true"></div>
+              <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+              <span class="source-badge" id="source-badge" hidden>LIVE</span>
+              <span class="stage-hud" id="stage-hud" aria-hidden="true">SRC · NONE</span>
+            </div>
+
+            <div class="controls">
+              <button class="button button-primary" id="btn-start" type="button">Start camera</button>
+              <button class="button button-outline" id="btn-stop" type="button" disabled>Stop camera</button>
+              <label class="button button-outline file-btn" for="file-input">
+                Upload sample video
+                <input id="file-input" type="file" accept="video/*">
+              </label>
+              <button class="button button-ghost" id="btn-reset" type="button">Reset</button>
+            </div>
+            <p class="status" id="status" role="status" aria-live="polite">Camera is off.</p>
+            <div class="error-box" id="error-box" role="alert" hidden>
+              <span id="error-text"></span>
+              <button class="button button-outline small" id="btn-retry" type="button">Retry</button>
+            </div>
+            <div class="source-opts">
+              <label class="check"><input type="checkbox" id="send-frames" checked> <span>Send camera frames to the recognition service</span></label>
+              <button class="button button-outline small" id="btn-mock" type="button" hidden aria-pressed="false">Run demo data</button>
+            </div>
+            <p class="note recog-help" id="recog-help">The camera preview works on its own. It is only a preview — a hand sign is recognised only when the recognition service returns a prediction.</p>
+          </div>
+
+          <div class="demo-side">
+            <div class="panel live-hand-panel reveal" id="live-hand">
+              <div class="panel-head"><h3>Live hand tracking</h3><div class="head-tags"><span class="src-badge" id="live-hand-src" hidden>DEMO DATA</span><span class="tag" id="live-hand-tag">Waiting</span></div></div>
+              <div class="live-hand-frame"><canvas id="live-hand-canvas" role="img" aria-label="Live hand tracking: waiting for live landmark data."></canvas></div>
+              <p class="note" id="live-hand-note">Drawn only from landmark coordinates sent by the backend. The illustration below is not this.</p>
+            </div>
+
+            <div class="panel landmark-panel reveal">
+              <div class="panel-head"><h3>Hand-landmark preview</h3><span class="tag">Illustrative</span></div>
+              <canvas id="hand-canvas" width="420" height="300" role="img" aria-label="Illustration of the 21 MediaPipe hand landmarks. Not live detection."></canvas>
+              <p class="note">Layout of the 21 landmarks the model will track. Live detection is not connected yet.</p>
+            </div>
+
+            <div class="panel predict-panel reveal" id="predict" data-state="disconnected">
+              <div class="panel-head"><h3>Prediction</h3><div class="head-tags"><span class="src-badge" id="pred-src" hidden>DEMO DATA</span><span class="pill" id="model-pill">Model not connected</span></div></div>
+              <div class="predict-row">
+                <span class="label">Recognised sign</span>
+                <output class="predict-value" id="pred-label">—</output>
+              </div>
+              <div class="predict-row">
+                <span class="label">Confidence</span>
+                <output class="predict-value small" id="pred-conf">—</output>
+              </div>
+              <div class="meter" aria-hidden="true"><span id="meter-fill"></span></div>
+              <div class="predict-row">
+                <span class="label">Word or sentence</span>
+                <output class="predict-value small" id="pred-text" lang="en">—</output>
+              </div>
+              <div class="predict-row">
+                <span class="label">Prediction time</span>
+                <output class="predict-value tiny" id="pred-time">—</output>
+              </div>
+              <div class="predict-row">
+                <span class="label">Status</span>
+                <output class="predict-value tiny" id="pred-status">Recognition service not connected</output>
+              </div>
+              <div class="alts" id="pred-alts-wrap" hidden>
+                <span class="label">Alternative predictions</span>
+                <ol id="pred-alts"></ol>
+              </div>
+              <p class="note" id="pred-note">Recognition model not connected. Real predictions and confidence will appear here once the classifier is integrated.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="demo-extra">
+          <div class="panel backend-panel reveal" id="backend-panel" data-state="checking">
+            <div class="panel-head"><h3>Backend connection</h3><span class="state-pill" id="be-pill"><i class="state-dot" aria-hidden="true"></i><span id="be-pill-text">Checking…</span></span></div>
+            <p class="be-msg skeleton" id="be-msg" role="status" aria-live="polite">Checking the recognition service…</p>
+            <dl class="kv">
+              <div><dt>Mode</dt><dd id="be-mode">—</dd></div>
+              <div><dt>Server</dt><dd id="be-host">—</dd></div>
+              <div><dt>Transport</dt><dd id="be-transport">—</dd></div>
+              <div><dt>Last checked</dt><dd id="be-checked">—</dd></div>
+              <div><dt>Reported by server</dt><dd id="be-caps">—</dd></div>
+              <div><dt>Frames sent / skipped</dt><dd id="be-frames">0 / 0</dd></div>
+            </dl>
+            <div class="be-actions"><button class="button button-outline small" id="be-retry" type="button">Retry connection</button></div>
+            <details class="be-help">
+              <summary>How to connect the recognition backend</summary>
+              <ol>
+                <li>Open <code>js/config.js</code> and set <code>backend.baseUrl</code>.</li>
+                <li>Choose <code>backend.transport</code>: <code>http</code>, <code>websocket</code> or <code>sse</code>.</li>
+                <li>Make sure the server allows this page’s origin (CORS) and answers <code>/health</code>.</li>
+                <li>Reload. This panel shows the real connection state.</li>
+              </ol>
+              <p>Field-by-field details: <code>docs/BACKEND_API.md</code>.</p>
+            </details>
+          </div>
+
+          <div class="panel translate-panel reveal" id="translate-panel">
+            <div class="panel-head"><h3>Translation &amp; speech</h3><span class="src-badge" id="tr-src" hidden>DEMO DATA</span></div>
+            <div class="field">
+              <label class="label" for="lang-select">Show translation in</label>
+              <select id="lang-select">
+                <option value="en">English</option>
+                <option value="hi">हिन्दी (Hindi)</option>
+                <option value="bn">বাংলা (Bengali)</option>
+              </select>
+            </div>
+            <div class="tr-block">
+              <span class="label">Original <em id="tr-orig-lang"></em></span>
+              <p class="tr-text" id="tr-orig">—</p>
+            </div>
+            <div class="tr-block">
+              <span class="label">Translation <span class="chip" id="tr-chip" data-kind="none">Nothing to translate</span></span>
+              <p class="tr-text" id="tr-text">—</p>
+              <p class="note" id="tr-note">A translation appears here only when the backend supplies one.</p>
+            </div>
+            <div class="tts-row">
+              <button class="button button-outline small" id="tts-orig" type="button" disabled>Speak original</button>
+              <button class="button button-outline small" id="tts-trans" type="button" disabled>Speak translation</button>
+              <button class="button button-ghost small" id="tts-stop" type="button" disabled>Stop</button>
+            </div>
+            <p class="status" id="tts-status" role="status" aria-live="polite">Speech needs a recognised result first.</p>
+          </div>
+
+          <div class="panel history-panel reveal" id="history-panel">
+            <div class="panel-head"><h3>Session history</h3><button class="button button-ghost small" id="hist-clear" type="button" disabled>Clear history</button></div>
+            <p class="hist-empty" id="hist-empty">No predictions received yet in this session.</p>
+            <ol class="history" id="hist-list" aria-label="Predictions received in this session"></ol>
+            <p class="note">Session only: held in memory for this page visit and not saved anywhere. Reloading or closing the tab clears it.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PIPELINE ============ -->
+    <section class="section alt" id="pipeline" aria-labelledby="pipe-title">
+      <div class="wrap">
+        <header class="section-head reveal">
+          <p class="kicker">02 · Working principle</p>
+          <h2 id="pipe-title">From pixels to a sign, in six stages.</h2>
+          <p>Select a stage to see what happens inside it and what it hands to the next one.</p>
+        </header>
+
+        <div class="pipeline reveal" id="pipeline-ui">
+          <div class="pipe-track" role="tablist" aria-label="Pipeline stages" id="pipe-tabs"></div>
+          <div class="pipe-flow" aria-hidden="true"><span class="packet"></span></div>
+          <div class="pipe-detail panel" id="pipe-panel" role="tabpanel" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PHYSICS ============ -->
+    <section class="section" id="physics" aria-labelledby="phys-title">
+      <div class="wrap">
+        <header class="section-head reveal">
+          <p class="kicker">03 · Motion &amp; physics</p>
+          <h2 id="phys-title">Speed, acceleration, jerk — and energy.</h2>
+          <p>Hand trajectories carry information that a still image cannot. The curves in the first two panels are <b>illustrative</b>: a smooth idealised movement, not measured data. Real measurements appear in <a href="#motion-live">Live motion analytics</a> once the backend sends landmark data.</p>
+        </header>
+
+        <div class="physics-grid">
+          <div class="panel charts reveal">
+            <div class="charts-top">
+              <button class="button button-outline small" id="btn-play" type="button" aria-pressed="true">Pause</button>
+              <label class="slider-label" for="time-slider">Time</label>
+              <input type="range" id="time-slider" min="0" max="1000" value="0" aria-label="Time through the movement">
+            </div>
+            <div id="charts"></div>
+            <p class="note">Theoretical minimum-jerk movement over 1 s. Axes are fixed so you can see curves grow as speed increases.</p>
+          </div>
+
+          <div class="panel energy reveal">
+            <div class="panel-head"><h3>Kinetic energy</h3><span class="tag">Theoretical</span></div>
+            <div class="formula" aria-label="Kinetic energy equals one half m v squared">KE = ½ · m · <b>v²</b></div>
+            <p class="note">Energy grows with the <b>square</b> of speed: doubling speed quadruples energy. Fast and slow versions of the same shape can therefore look very different.</p>
+            <label class="slider-label" for="speed-slider">Peak hand speed: <output id="speed-out">1.50 m/s</output></label>
+            <input type="range" id="speed-slider" min="0.2" max="3" step="0.05" value="1.5">
+            <svg id="ke-chart" viewBox="0 0 320 190" role="img" aria-label="Kinetic energy versus speed curve with a moving marker"></svg>
+            <dl class="ke-readout">
+              <div><dt>Energy</dt><dd id="ke-out">—</dd></div>
+              <div><dt>vs. 1 m/s</dt><dd id="ke-ratio">—</dd></div>
+            </dl>
+            <p class="note small-note">Assumes an effective moving mass of 0.4 kg for illustration only.</p>
+          </div>
+        </div>
+
+        <div class="panel motion-panel reveal" id="motion-live" data-state="waiting">
+          <div class="panel-head motion-head">
+            <div>
+              <h3>Live motion analytics</h3>
+              <p class="note motion-sub">Measured from timestamped landmark coordinates sent by the backend. Separate from the theoretical curves above.</p>
+            </div>
+            <div class="head-tags"><span class="src-badge" id="mx-src" hidden>DEMO DATA</span><span class="state-pill" id="mx-pill"><i class="state-dot" aria-hidden="true"></i><span id="mx-pill-text">Waiting for live landmark data</span></span></div>
+          </div>
+
+          <div class="mx-controls">
+            <label class="field-inline"><span class="label">History window</span>
+              <select id="mx-window"><option value="5">5 s</option><option value="10" selected>10 s</option><option value="30">30 s</option></select>
+            </label>
+            <label class="check"><input type="checkbox" id="mx-smooth"> <span>Smooth position before differentiating</span></label>
+            <button class="button button-ghost small" id="mx-clear" type="button">Clear graphs</button>
+          </div>
+          <p class="note mx-smooth-note" id="mx-smooth-note">Smoothing is off: values are computed from the raw coordinates received.</p>
+
+          <dl class="mx-readout" id="mx-readout" aria-label="Latest motion values">
+            <div><dt>Tracking</dt><dd id="mx-status">Waiting for live landmark data</dd></div>
+            <div><dt>Frame time</dt><dd id="mx-time">—</dd></div>
+            <div><dt>Position (x, y)</dt><dd id="mx-pos">—</dd></div>
+            <div><dt>Velocity</dt><dd id="mx-vel">—</dd></div>
+            <div><dt>Acceleration</dt><dd id="mx-acc">—</dd></div>
+            <div><dt>Jerk</dt><dd id="mx-jerk">—</dd></div>
+            <div><dt>Data quality</dt><dd id="mx-quality">—</dd></div>
+            <div><dt>Kinetic energy</dt><dd id="mx-ke">Unavailable</dd></div>
+          </dl>
+
+          <div class="mx-grid">
+            <section class="mx-cell" aria-labelledby="mx-h-traj"><h4 id="mx-h-traj">Hand trajectory <small id="mx-u-traj"></small></h4><div id="mx-traj"></div></section>
+            <section class="mx-cell" aria-labelledby="mx-h-comp"><h4 id="mx-h-comp">Position components <small id="mx-u-comp"></small></h4><div id="mx-comp"></div></section>
+            <section class="mx-cell" aria-labelledby="mx-h-vel"><h4 id="mx-h-vel">Velocity <small id="mx-u-vel"></small></h4><div id="mx-vel-chart"></div></section>
+            <section class="mx-cell" aria-labelledby="mx-h-acc"><h4 id="mx-h-acc">Acceleration <small id="mx-u-acc"></small></h4><div id="mx-acc-chart"></div></section>
+            <section class="mx-cell" aria-labelledby="mx-h-jerk"><h4 id="mx-h-jerk">Jerk <small id="mx-u-jerk"></small></h4><div id="mx-jerk-chart"></div></section>
+            <section class="mx-cell" aria-labelledby="mx-h-ke"><h4 id="mx-h-ke">Kinetic energy <small id="mx-u-ke"></small></h4><div id="mx-ke-chart"></div></section>
+          </div>
+
+          <div class="mx-notes">
+            <p class="note" id="mx-units-note"></p>
+            <p class="note">Method: velocity, acceleration and jerk are finite differences of the tracked point between consecutive valid frames, shown as vector magnitudes. Nothing is calculated across a tracking gap, and duplicate or out-of-order timestamps are dropped. Differentiating noisy tracking amplifies the noise, jerk most of all.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ COMPARE ============ -->
+    <section class="section alt" id="compare" aria-labelledby="cmp-title">
+      <div class="wrap">
+        <header class="section-head reveal">
+          <p class="kicker">04 · Our approach</p>
+          <h2 id="cmp-title">Shape alone is not enough.</h2>
+          <p>Many signs share a hand shape and differ only in how they move. Sankeet Shayak combines both. This is a conceptual comparison — not a measured result.</p>
+        </header>
+
+        <div class="compare reveal">
+          <div class="seg" role="tablist" aria-label="Feature approach" id="cmp-tabs"></div>
+          <div class="cmp-body panel" id="cmp-panel" role="tabpanel"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PROJECT ============ -->
+    <section class="section" id="project" aria-labelledby="proj-title">
+      <div class="wrap">
+        <header class="section-head reveal">
+          <p class="kicker">05 · About the project</p>
+          <h2 id="proj-title">Built to make signing understood.</h2>
+        </header>
+
+        <div class="proj-grid">
+          <article class="card reveal">
+            <h3>Problem</h3>
+            <p>Sign languages depend on both hand shape and movement, yet many recognition systems look at shape alone and behave like opaque black boxes. Communication between signers and non-signers remains difficult.</p>
+          </article>
+          <article class="card reveal">
+            <h3>Objectives</h3>
+            <ul>
+              <li>Track hands from ordinary video using landmarks</li>
+              <li>Derive geometry, joint angles and kinematics</li>
+              <li>Estimate physics-inspired dynamic features</li>
+              <li>Classify signs with an interpretable pipeline</li>
+            </ul>
+          </article>
+          <article class="card reveal">
+            <h3>Architecture &amp; tech</h3>
+            <div class="chips">
+              <span>Video input</span><span>MediaPipe Hands</span><span>Joint angles</span><span>Kinematics</span><span>Dynamic features</span><span>ML classifier</span>
+            </div>
+            <p class="note">Frontend: HTML, CSS, JavaScript. Recognition backend: to be integrated.</p>
+          </article>
+          <article class="card reveal">
+            <h3>Advantages</h3>
+            <ul>
+              <li>Uses motion as well as shape</li>
+              <li>Features can be explained and inspected</li>
+              <li>Works from a standard camera</li>
+            </ul>
+          </article>
+          <article class="card reveal">
+            <h3>Limitations</h3>
+            <ul>
+              <li>Classifier results are pending experimental validation</li>
+              <li>Depends on lighting and hand visibility</li>
+              <li>Physics features are estimated from 2D video</li>
+            </ul>
+          </article>
+          <article class="card reveal">
+            <h3>Applications &amp; future scope</h3>
+            <p class="note-top">Proposed, not yet demonstrated</p>
+            <ul>
+              <li>Assistive communication tools</li>
+              <li>Sign-language learning aids</li>
+              <li>Larger vocabularies and continuous signing</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="wrap footer-in">
+        <a class="brand" href="#home"><span>Sankeet <em>Shayak</em></span></a>
+        <p>Research prototype. Recognition results are pending experimental validation.</p>
+        <div class="footer-actions">
+          <button type="button" class="link-btn" data-credits-open aria-haspopup="dialog" aria-controls="credits-modal">Project Credits</button>
+          <button type="button" class="link-btn" id="replay-intro">Replay intro</button>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ============ PROJECT CREDITS MODAL ============
+       EDIT: items marked data-edit are placeholders carried over from the old Team section.
+       Replace with verified details. Suggested roles (use only where accurate):
+       Frontend Developer · Backend Developer · UI/UX & Animation · Project Guide -->
+  <div class="credits-overlay" id="credits-modal" hidden>
+    <div class="credits-dialog" role="dialog" aria-modal="true" aria-labelledby="credits-title" aria-describedby="credits-sub" tabindex="-1">
+      <button type="button" class="credits-close" data-credits-close aria-label="Close project credits">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+      <header class="credits-head">
+        <p class="credits-kicker">Project Credits</p>
+        <h2 id="credits-title">Meet the Team</h2>
+        <p id="credits-sub">The people behind Sankeet Shayak.</p>
+      </header>
+      <div class="credits-body">
+        <ul class="credits-grid">
+          <li class="credit-card">
+            <span class="avatar" aria-hidden="true">SS</span>
+            <h3 data-edit>Team member name</h3>
+            <p class="credit-role" data-edit>Role — to be added</p>
+            <p class="credit-work" data-edit>Contribution — to be added</p>
+          </li>
+          <li class="credit-card">
+            <span class="avatar" aria-hidden="true">SS</span>
+            <h3 data-edit>Team member name</h3>
+            <p class="credit-role" data-edit>Role — to be added</p>
+            <p class="credit-work" data-edit>Contribution — to be added</p>
+          </li>
+          <li class="credit-card">
+            <span class="avatar" aria-hidden="true">SS</span>
+            <h3 data-edit>Team member name</h3>
+            <p class="credit-role" data-edit>Role — to be added</p>
+            <p class="credit-work" data-edit>Contribution — to be added</p>
+          </li>
+          <li class="credit-card guide">
+            <span class="avatar" aria-hidden="true">★</span>
+            <h3 data-edit>Guide name</h3>
+            <p class="credit-role">Project Guide</p>
+            <p class="credit-work" data-edit>Guidance — to be added</p>
+          </li>
+        </ul>
+        <div class="credits-meta">
+          <p class="college"><b data-edit>College / Department name</b> · <span data-edit>Academic year</span></p>
+          <p class="note">Acknowledgements: <span data-edit>to be added</span></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Backend-ready modules. Order matters: config → contract → engines → adapter → existing page script → UI wiring. -->
+  <script src="js/config.js"></script>
+  <script src="js/data-contract.js"></script>
+  <script src="js/motion-analytics.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/landmark-view.js"></script>
+  <script src="js/speech.js"></script>
+  <script src="js/backend-adapter.js"></script>
+  <script src="js/frame-sender.js"></script>
+  <script src="script.js"></script>
+  <script src="js/ui-controller.js"></script>
+</body>
+</html>
