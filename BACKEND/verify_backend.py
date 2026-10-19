@@ -38,11 +38,13 @@ def check_project_structure() -> bool:
     # 2. Essential Files Check
     req_exists = (root / "requirements.txt").is_file()
     dockerfile_exists = (root / "Dockerfile").is_file()
-    env_example_exists = (root / ".env.example").is_file()
+    env_example_exists = (root / ".env.example").is_file() or (root.parent / ".env.example").is_file()
+    env_exists = (root / ".env").is_file() or (root.parent / ".env").is_file()
 
     print_status("File 'requirements.txt' exists", req_exists)
     print_status("File 'Dockerfile' exists", dockerfile_exists)
     print_status("File '.env.example' exists", env_example_exists)
+    print_status("File '.env' (with CLIENT_HOST) exists", env_exists)
 
     # 3. Requirements Content Check (Server verification)
     server_found = False
@@ -52,7 +54,7 @@ def check_project_structure() -> bool:
             server_found = True
     print_status("Production ASGI/WSGI server (Uvicorn/Gunicorn) in requirements.txt", server_found)
 
-    return all([src_exists, models_exists, tests_exists, req_exists, dockerfile_exists, env_example_exists, server_found])
+    return all([src_exists, models_exists, tests_exists, req_exists, dockerfile_exists, env_example_exists, env_exists, server_found])
 
 
 def check_runtime_and_endpoints() -> bool:

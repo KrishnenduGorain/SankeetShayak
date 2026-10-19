@@ -29,8 +29,9 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# CORS: check explicit HANDSHAYAK_CORS_ORIGINS or fallback to settings.CORS_ORIGINS
-env_cors = os.getenv("HANDSHAYAK_CORS_ORIGINS")
+# CORS: Check explicit CLIENT_HOST, CORS_ORIGINS, or HANDSHAYAK_CORS_ORIGINS
+env_client = os.getenv("CLIENT_HOST")
+env_cors = os.getenv("CORS_ORIGINS") or os.getenv("HANDSHAYAK_CORS_ORIGINS") or env_client
 allowed_origins = [o.strip() for o in env_cors.split(",") if o.strip()] if env_cors else settings.CORS_ORIGINS
 
 allow_all = "*" in allowed_origins
@@ -111,8 +112,14 @@ async def websocket_stream_endpoint(websocket: WebSocket):
 
 
 # Mount static web frontend if available (e.g. for Render or local web dashboard)
-_web_dir = Path(__file__).resolve().parent.parent.parent / "web"
-if _web_dir.is_dir() and (_web_dir / "index.html").is_file():
+_base = Path(__file__).resolve().parent.parent.parent
+_candidate_dirs = [
+    _base / "web",
+    _base / "FRONTEND",
+    _base.parent / "FRONTEND",
+]
+_web_dir = next((d for d in _candidate_dirs if d.is_dir() and (d / "index.html").is_file()), None)
+if _web_dir:
     app.mount("/", StaticFiles(directory=str(_web_dir), html=True), name="static")
 
 

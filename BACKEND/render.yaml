@@ -11,6 +11,8 @@ services:
     envVars:
       - key: ENVIRONMENT
         value: production
+      - key: CLIENT_HOST
+        value: "*"
       - key: CORS_ORIGINS
         value: "*"
       - key: LOG_LEVEL
