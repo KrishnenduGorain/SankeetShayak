@@ -456,7 +456,7 @@ body.ready #hero-hand { opacity: 1; }
 /* pipeline: connectors, rotating border, terminal cursor */
 .pipe-step:not(:last-child)::after { content: ""; position: absolute; top: 50%; right: -11px; width: 12px; height: 2px; background: linear-gradient(90deg, var(--cyan), var(--violet)); background-size: 200% 100%; animation: flowX 1.4s linear infinite; }
 @keyframes flowX { to { background-position: -200% 0; } }
-.pipe-step[aria-selected="true"]::before { content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1.5px; pointer-events: none; background: conic-gradient(from var(--ang), transparent 0 62%, var(--cyan) 82%, var(--violet) 100%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: angSpin 3s linear infinite; }
+.pipe-step[aria-selected="true"]::before { content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1.5px; pointer-events: none; background: conic-gradient(from var(--ang), transparent 0 62%, var(--cyan) 82%, var(--violet) 100%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: angSpin 3s linear infinite; }
 @keyframes angSpin { to { --ang: 360deg; } }
 .pipe-detail .out::after { content: "▍"; color: var(--cyan); animation: blink 1s steps(2) infinite; }
 
