@@ -1,6 +1,7 @@
 """Application Configuration Module for SankeetShayak.
 
 Centralizes all environment variable settings with sensible defaults.
+Supports CLIENT_HOST, CORS_ORIGINS, and dynamic Render port bindings.
 """
 
 import os
@@ -8,9 +9,13 @@ from pathlib import Path
 from typing import List
 from dotenv import load_dotenv
 
-# Resolve project root and load .env if present
+# Resolve project root and load .env from BACKEND/ or root
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR / ".env")
+env_path = BASE_DIR / ".env"
+if not env_path.is_file() and (BASE_DIR.parent / ".env").is_file():
+    env_path = BASE_DIR.parent / ".env"
+
+load_dotenv(env_path)
 
 
 class Settings:
@@ -19,13 +24,15 @@ class Settings:
     # Server & Network
     HOST: str = os.getenv("HOST", "0.0.0.0")
     PORT: int = int(os.getenv("PORT", "8000"))
-    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "production")
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "info")
 
-    # CORS & Client Security
+    # Client Host & CORS (Cross-Origin Resource Sharing)
+    CLIENT_HOST: str = os.getenv("CLIENT_HOST", "*")
+    raw_origins = os.getenv("CORS_ORIGINS") or os.getenv("CLIENT_HOST") or os.getenv("HANDSHAYAK_CORS_ORIGINS") or "*"
     CORS_ORIGINS: List[str] = [
         origin.strip()
-        for origin in os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000,*").split(",")
+        for origin in raw_origins.split(",")
         if origin.strip()
     ]
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
