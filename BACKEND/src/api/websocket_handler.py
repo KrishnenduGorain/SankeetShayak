@@ -4,10 +4,12 @@ Provides robust per-client circular frame buffering, NaN/bad-frame isolation,
 stride-based thread-pool inference, and explicit reset controls.
 """
 
+from __future__ import annotations
+
 import asyncio
 from collections import deque
 import logging
-from typing import Deque, Dict, List, Optional
+from typing import Deque, Dict, List, Optional, Tuple, Any
 from fastapi import WebSocket, WebSocketDisconnect
 import numpy as np
 
@@ -38,7 +40,7 @@ class StreamSession:
         self.buffer.clear()
         self.frame_count = 0
 
-    def push_frame(self, landmarks_21x3: np.ndarray) -> Tuple_Result:
+    def push_frame(self, landmarks_21x3: np.ndarray) -> Tuple[bool, Optional[str], bool, Optional[np.ndarray]]:
         """Add a frame to the buffer synchronously.
 
         Returns:
@@ -64,9 +66,6 @@ class StreamSession:
 
         snapshot = np.array(self.buffer, dtype=np.float64) if should_infer else None
         return True, None, should_infer, snapshot
-
-
-Tuple_Result = tuple
 
 
 class WebSocketStreamManager:
