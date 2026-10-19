@@ -37,6 +37,13 @@
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
         this.serverCapabilities = data;
+        try {
+          const signsResp = await fetch(`${this.config.baseUrl}${this.config.signsEndpoint}`, { method: 'GET', headers: { 'Accept': 'application/json' } });
+          if (signsResp.ok) {
+            const signsData = await signsResp.json();
+            this.serverCapabilities.classes = signsData.classes;
+          }
+        } catch (e) {}
         return true;
       } catch (err) {
         return false;

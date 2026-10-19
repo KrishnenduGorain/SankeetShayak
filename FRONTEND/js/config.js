@@ -7,7 +7,7 @@
   
   const savedUrl = localStorage.getItem('ss_backend_url');
   const paramUrl = urlParams.get('backend');
-  const defaultUrl = isLocal ? 'http://localhost:8000' : 'https://sankeetshayak-backend.onrender.com';
+  const defaultUrl = 'https://sankeetshayak.onrender.com';
 
   const baseUrl = (paramUrl || savedUrl || defaultUrl).replace(/\/+$/, '');
 
