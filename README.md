@@ -1,6 +1,6 @@
 > **SankeetShayak** (Hand Helper) is a physics-informed AI system that models the human hand as a biomechanical rigid-body linkage to improve sign-language recognition.
 
-## 📖 Overview
+## 📖 SankeetShayak
 Conventional sign-language recognition systems rely almost entirely on visual handshape and landmark trajectories. However, visually similar signs (e.g., a "gentle tap" vs. a "forceful strike") can have vastly different movement characteristics. 
 
 Project **SankeetShayak** goes beyond static imagery by treating the hand as a mechanical system. Using **MediaPipe**, we extract 3D landmarks and compute physical dynamic features—such as velocity, acceleration, jerk, kinetic energy, and joint torque—to give our machine learning classifiers a deeper understanding of *how* the hand moves, not just *what* it looks like.
