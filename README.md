@@ -61,3 +61,10 @@ pip install -r requirements.txt
 
 ## 📝 License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Vercel deployment tips
+
+- **Project name** must be all lower‑case (e.g. `sankeetshayak-frontend`).
+- **Root directory** = `FRONTEND`.
+- **Do NOT** add an empty environment‑variable row; the UI will block the deploy with “Key is required”. If you need a variable later, give it a proper name and value.
+
