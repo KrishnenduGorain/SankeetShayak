@@ -1,11 +1,9 @@
-# Project HandShayak: Physics-Informed Sign-Language Recognition 
-
-> **HandShayak** (Hand Helper) is a physics-informed AI system that models the human hand as a biomechanical rigid-body linkage to improve sign-language recognition.
+> **SankeetShayak** (Hand Helper) is a physics-informed AI system that models the human hand as a biomechanical rigid-body linkage to improve sign-language recognition.
 
 ## 📖 Overview
 Conventional sign-language recognition systems rely almost entirely on visual handshape and landmark trajectories. However, visually similar signs (e.g., a "gentle tap" vs. a "forceful strike") can have vastly different movement characteristics. 
 
-Project **HandShayak** goes beyond static imagery by treating the hand as a mechanical system. Using **MediaPipe**, we extract 3D landmarks and compute physical dynamic features—such as velocity, acceleration, jerk, kinetic energy, and joint torque—to give our machine learning classifiers a deeper understanding of *how* the hand moves, not just *what* it looks like.
+Project **SankeetShayak** goes beyond static imagery by treating the hand as a mechanical system. Using **MediaPipe**, we extract 3D landmarks and compute physical dynamic features—such as velocity, acceleration, jerk, kinetic energy, and joint torque—to give our machine learning classifiers a deeper understanding of *how* the hand moves, not just *what* it looks like.
 
 ## ✨ Key Features
 * **Real-time Landmark Detection:** Powered by Google's MediaPipe Hands.
@@ -24,7 +22,7 @@ Project **HandShayak** goes beyond static imagery by treating the hand as a mech
 ## 🧑‍💻 The Team & Roles
 
 * **Monojoy:** Frontend Lead (Client-Side UI, WebSockets & Visualization)
-* H**arsimran:** ML & Backend Architect (FastAPI, Model Training & ONNX Export)
+* **Harsimran:** ML & Backend Architect (FastAPI, Model Training & ONNX Export)
 * **Krishnendu:** DevOps Lead (Dockerization, Cloud Deployment & CI/CD)
 * **Jai Krishna:** Physics Engine Developer (Kinematics, Dynamics & Math via NumPy)
 * **Debonnita:** Vision Pipeline Developer (MediaPipe 3D Landmark Extraction)
@@ -40,8 +38,8 @@ Project **HandShayak** goes beyond static imagery by treating the hand as a mech
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-username/hand-shayak.git
-cd hand-shayak
+git clone https://github.com/your-username/SankeetShayak.git
+cd SankeetShayak
 
 # 2. Create and activate a virtual environment
 python -m venv venv
