@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#050f1f">
+  <meta name="description" content="Live speech-to-text in your browser with microphone noise filtering. Works in 13 languages, including English, Hindi and Bengali.">
+  <title>Speech to Text — Sankeet Shayak</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+Devanagari:wght@400;600&family=Noto+Sans+Bengali:wght@400;600&display=swap">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="js/app.js" defer></script>
+</head>
+<body>
+<header class="stt-navbar">
+  <a class="stt-brand" href="../index.html" aria-label="Back to Sankeet Shayak">
+    <svg class="stt-brand-mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".5"/><path d="M9 19c2-6 4-8 7-8s5 2 7 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="16" cy="11" r="2.2" fill="currentColor"/></svg>
+    <span>Sankeet <em>Shayak</em></span>
+  </a>
+  <a class="stt-back" href="../index.html">← Back to main site</a>
+</header>
+
+<main class="app">
+  <h1>Speech to text</h1>
+  <p class="sub">Speak and watch your words appear. Noise filtering runs on the microphone at the same time.</p>
+
+  <div id="banner" class="banner" role="alert" hidden></div>
+
+  <section class="stage" aria-label="Microphone">
+    <canvas id="meter" aria-hidden="true"></canvas>
+    <div class="legend">
+      <span id="levelText">Microphone is off</span>
+      <span id="gateText"></span>
+    </div>
+    <div class="controls">
+      <button id="micBtn" type="button" aria-pressed="false">Start listening</button>
+      <button id="calibrateBtn" type="button" disabled title="Stay quiet for 2 seconds so the gate can learn your room's noise">Learn room noise</button>
+      <div id="status" role="status" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <details class="settings">
+    <summary>Settings</summary>
+    <div class="grid">
+      <label class="field"><span>Language</span>
+        <select id="lang">
+          <option value="en-IN">English (India)</option>
+          <option value="en-US">English (United States)</option>
+          <option value="en-GB">English (United Kingdom)</option>
+          <option value="hi-IN">हिन्दी (Hindi)</option>
+          <option value="bn-IN">বাংলা (Bengali, India)</option>
+          <option value="bn-BD">বাংলা (Bengali, Bangladesh)</option>
+          <option value="ta-IN">தமிழ் (Tamil)</option>
+          <option value="te-IN">తెలుగు (Telugu)</option>
+          <option value="mr-IN">मराठी (Marathi)</option>
+          <option value="es-ES">Español</option>
+          <option value="fr-FR">Français</option>
+          <option value="de-DE">Deutsch</option>
+          <option value="ja-JP">日本語</option>
+        </select>
+      </label>
+      <label class="field"><span>Microphone</span>
+        <select id="mic"><option value="">Default microphone</option></select>
+      </label>
+
+      <label class="check"><input type="checkbox" id="ns" checked>
+        <span>Browser noise suppression<small>Removes steady background noise such as fans and traffic.</small></span></label>
+      <label class="check"><input type="checkbox" id="ec" checked>
+        <span>Echo cancellation<small>Stops speaker sound from being heard again. Use headphones if it still echoes.</small></span></label>
+      <label class="check"><input type="checkbox" id="agc" checked>
+        <span>Automatic volume<small>Evens out quiet and loud speech.</small></span></label>
+      <label class="check"><input type="checkbox" id="hp" checked>
+        <span>Cut low rumble<small>Filters sound below 90 Hz (desk bumps, air conditioner hum).</small></span></label>
+      <label class="check"><input type="checkbox" id="gate" checked>
+        <span>Noise gate<small>Lowers the microphone between words so background sound is not transcribed.</small></span></label>
+      <label class="check"><input type="checkbox" id="feed" checked>
+        <span>Send filtered sound to the recognizer<small>Needs Chrome 139 or newer. Other browsers listen to the raw microphone.</small></span></label>
+
+      <div class="field"><span>Gate threshold</span>
+        <div class="range-row">
+          <input type="range" id="thr" min="-70" max="-20" step="1" value="-52" aria-label="Gate threshold in decibels">
+          <output id="thrOut" for="thr">-52 dB</output>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <section class="transcript" aria-label="Transcript">
+    <h2>Transcript <span class="muted-inline">(you can edit it)</span></h2>
+    <textarea id="output" spellcheck="true" placeholder="Spoken words will appear here…" aria-label="Transcript text"></textarea>
+    <div id="interim" aria-hidden="true"></div>
+    <div class="actions">
+      <button id="copyBtn" type="button">Copy text</button>
+      <button id="saveBtn" type="button">Save as .txt</button>
+      <button id="clearBtn" type="button">Clear</button>
+      <span class="count" id="count">0 words</span>
+    </div>
+  </section>
+
+  <p class="note">Transcription uses your browser's speech service (Chrome and Edge send audio to their speech servers). Noise filtering happens on your device.</p>
+</main>
+<noscript><p class="banner">This app needs JavaScript. Turn it on in your browser settings and reload the page.</p></noscript>
+</body>
+</html>
