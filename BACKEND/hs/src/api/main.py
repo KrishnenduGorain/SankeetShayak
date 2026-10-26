@@ -67,6 +67,7 @@ stream_manager = WebSocketStreamManager(predictor_factory=get_predictor)
 
 
 @app.get("/health", response_model=HealthResponse, tags=["System"])
+@app.head("/health", include_in_schema=False, tags=["System"])
 def health_check():
     """System health verification."""
     return HealthResponse()

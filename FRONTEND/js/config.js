@@ -14,17 +14,17 @@
   window.SS_CONFIG = {
     backend: {
       baseUrl: baseUrl,
-      transport: urlParams.get('transport') || 'websocket', // 'websocket' | 'http'
+      transport: urlParams.get('transport') || 'auto', // 'auto' | 'http' | 'websocket'
       healthEndpoint: '/health',
       signsEndpoint: '/signs',
       predictEndpoint: '/predict',
       wsEndpoint: '/ws/stream',
-      reconnectIntervalMs: 3000,
-      pollIntervalMs: 5000,
+      reconnectIntervalMs: 5000,
+      pollIntervalMs: 1500,
     },
     camera: {
       fps: 30,
-      windowSize: 30,
+      windowSize: 20,
       stride: 3,
     },
     setBackendUrl: function(url) {

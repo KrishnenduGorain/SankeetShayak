@@ -755,6 +755,7 @@
   }
   function setIdle(msg = 'Camera is off.') {
     releaseMedia();
+    if (window.SS_FrameSender) window.SS_FrameSender.stop();
     stage.dataset.state = 'idle';
     badge.hidden = true;
     btnStart.disabled = false;
@@ -780,7 +781,8 @@
       stage.dataset.state = 'live';
       badge.textContent = 'LIVE'; badge.classList.remove('file'); badge.hidden = false;
       btnStop.disabled = false;
-      say('Camera is live — preview only. The preview is not recognition.');
+      if (window.SS_FrameSender) window.SS_FrameSender.start(cam);
+      say('Camera is live — recognition and motion analytics active.');
     } catch (err) {
       releaseMedia();
       stage.dataset.state = 'idle';
@@ -814,7 +816,8 @@
       badge.textContent = 'SAMPLE'; badge.classList.add('file'); badge.hidden = false;
       btnStart.disabled = false; btnStop.disabled = false;
       btnStop.textContent = 'Stop video';
-      say(`Loaded “${file.name}” — preview only. The preview is not recognition.`);
+      if (window.SS_FrameSender) window.SS_FrameSender.start(cam);
+      say(`Loaded “${file.name}” — recognition and motion analytics active.`);
     };
   }
 

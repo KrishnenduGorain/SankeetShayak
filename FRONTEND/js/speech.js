@@ -4,7 +4,9 @@
 (function() {
   const DICTIONARY = {
     'swipe_slow': { en: 'Slow Swipe', hi: 'धीमी स्वाइप', bn: 'ধীর সোয়াইপ' },
+    'swipe_rapid': { en: 'Rapid Swipe', hi: 'तेज़ स्वाइप', bn: 'দ্রুত সোয়াইপ' },
     'tap_forceful': { en: 'Forceful Tap', hi: 'ज़ोरदार टैप', bn: 'জোরদার ট্যাপ' },
+    'tap_gentle': { en: 'Gentle Tap', hi: 'हल्का टैप', bn: 'হালকা ট্যাপ' },
     'wave_rapid': { en: 'Rapid Wave', hi: 'तेज़ हाथ हिलाना', bn: 'দ্রুত হাত নাড়া' },
     'pinch_gentle': { en: 'Gentle Pinch', hi: 'हल्की चुटकी', bn: 'হালকা চিমটি' }
   };

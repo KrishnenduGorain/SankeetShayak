@@ -53,7 +53,7 @@
       }
       if (beMode) beMode.textContent = 'Production';
       if (beHost) beHost.textContent = adapter.config.baseUrl;
-      if (beTransport) beTransport.textContent = adapter.config.transport;
+      if (beTransport) beTransport.textContent = (adapter.activeTransport || adapter.config.transport).toUpperCase();
       if (beChecked) beChecked.textContent = new Date().toLocaleTimeString();
       if (beCaps && adapter.serverCapabilities) {
         const cls = adapter.serverCapabilities.classes || [];
@@ -80,6 +80,21 @@
       currentPrediction = res;
       if (window.SanketSahayak && window.SanketSahayak.setPrediction) {
         window.SanketSahayak.setPrediction(res);
+      }
+
+      // Alternative predictions
+      const altsWrap = document.getElementById('pred-alts-wrap');
+      const altsList = document.getElementById('pred-alts');
+      if (altsWrap && altsList && res.probabilities) {
+        const sorted = Object.entries(res.probabilities)
+          .sort((a, b) => b[1] - a[1])
+          .filter(([label, prob]) => label !== res.label && prob > 0.05);
+        if (sorted.length > 0) {
+          altsList.innerHTML = sorted.map(([l, p]) => `<li>${l} <b>${Math.round(p * 100)}%</b></li>`).join('');
+          altsWrap.hidden = false;
+        } else {
+          altsWrap.hidden = true;
+        }
       }
 
       // Translation

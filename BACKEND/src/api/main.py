@@ -58,6 +58,7 @@ def get_predictor() -> GesturePredictor:
 
 
 @app.get("/health", response_model=HealthResponse, tags=["System"])
+@app.head("/health", include_in_schema=False, tags=["System"])
 def health_check():
     """System health verification."""
     return HealthResponse()
@@ -103,11 +104,15 @@ async def websocket_stream_endpoint(websocket: WebSocket):
     session = await stream_manager.connect(websocket)
     try:
         while True:
-            data = await websocket.receive_json()
+            try:
+                data = await websocket.receive_json()
+            except (ValueError, TypeError):
+                await websocket.send_json({"type": "error", "message": "Invalid JSON payload"})
+                continue
             await stream_manager.handle_message(websocket, session, data)
     except WebSocketDisconnect:
         stream_manager.disconnect(websocket)
-    except Exception:
+    except Exception as exc:
         stream_manager.disconnect(websocket)
 
 
