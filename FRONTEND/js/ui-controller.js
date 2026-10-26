@@ -3,7 +3,7 @@
  * Bridges BackendAdapter, Prediction Panel, History, and Translation UI
  */
 (function() {
-  document.addEventListener('DOMContentLoaded', () => {
+  function initController() {
     const adapter = window.SS_BackendAdapter;
     if (!adapter) return;
 
@@ -19,6 +19,9 @@
     const beCaps = document.getElementById('be-caps');
     const beFrames = document.getElementById('be-frames');
     const beRetry = document.getElementById('be-retry');
+    const predStatusEl = document.getElementById('pred-status');
+    const predTimeEl = document.getElementById('pred-time');
+    const predTextEl = document.getElementById('pred-text');
 
     // Translation Elements
     const langSelect = document.getElementById('lang-select');
@@ -42,13 +45,12 @@
       });
     }
 
-    // Backend status updates
-    adapter.on('status', ({ state, message }) => {
+    function updateStatusUI(state, message) {
       if (bePanel) bePanel.dataset.state = state;
       if (bePill) bePill.dataset.state = state;
       if (bePillText) bePillText.textContent = state === 'connected' ? 'Connected' : (state === 'checking' ? 'Connecting…' : 'Disconnected');
       if (beMsg) {
-        beMsg.textContent = message;
+        beMsg.textContent = message || (state === 'connected' ? 'Connected to recognition service.' : 'Connecting…');
         beMsg.classList.remove('skeleton');
       }
       if (beMode) beMode.textContent = 'Production';
@@ -57,7 +59,14 @@
       if (beChecked) beChecked.textContent = new Date().toLocaleTimeString();
       if (beCaps && adapter.serverCapabilities) {
         const cls = adapter.serverCapabilities.classes || [];
-        beCaps.textContent = `${cls.length} signs: ${cls.join(', ')}`;
+        beCaps.textContent = cls.length ? `${cls.length} signs: ${cls.join(', ')}` : 'Live Model Ready';
+      }
+
+      // Update prediction panel status
+      if (predStatusEl) {
+        predStatusEl.textContent = state === 'connected' 
+          ? 'Recognition service connected' 
+          : (state === 'checking' ? 'Connecting to recognition service…' : 'Recognition service not connected');
       }
 
       // Update main prediction panel state
@@ -67,7 +76,15 @@
           message
         );
       }
+    }
+
+    // Backend status listener
+    adapter.on('status', ({ state, message }) => {
+      updateStatusUI(state, message);
     });
+
+    // Immediately sync current status
+    updateStatusUI(adapter.state, adapter.lastMessage);
 
     // Frame counter updates
     adapter.on('frameCount', ({ sent, skipped }) => {
@@ -81,6 +98,28 @@
       if (window.SanketSahayak && window.SanketSahayak.setPrediction) {
         window.SanketSahayak.setPrediction(res);
       }
+
+      if (predTimeEl) {
+        predTimeEl.textContent = new Date().toLocaleTimeString();
+      }
+
+      if (predStatusEl) {
+        predStatusEl.textContent = res.isReliable !== false ? 'Live prediction received' : 'Low confidence inference';
+      }
+
+      // Translation
+      const curLang = langSelect ? langSelect.value : 'en';
+      const translated = window.SS_Speech ? window.SS_Speech.translate(res.label, curLang) : res.label;
+      if (trOrig) trOrig.textContent = res.label;
+      if (trText) trText.textContent = translated;
+      if (predTextEl) predTextEl.textContent = translated;
+      if (trChip) {
+        trChip.dataset.kind = 'ready';
+        trChip.textContent = `Translated to ${curLang.toUpperCase()}`;
+      }
+      if (ttsOrig) ttsOrig.disabled = false;
+      if (ttsTrans) ttsTrans.disabled = false;
+      if (ttsStop) ttsStop.disabled = false;
 
       // Alternative predictions
       const altsWrap = document.getElementById('pred-alts-wrap');
@@ -96,19 +135,6 @@
           altsWrap.hidden = true;
         }
       }
-
-      // Translation
-      const curLang = langSelect ? langSelect.value : 'en';
-      const translated = window.SS_Speech ? window.SS_Speech.translate(res.label, curLang) : res.label;
-      if (trOrig) trOrig.textContent = res.label;
-      if (trText) trText.textContent = translated;
-      if (trChip) {
-        trChip.dataset.kind = 'ready';
-        trChip.textContent = `Translated to ${curLang.toUpperCase()}`;
-      }
-      if (ttsOrig) ttsOrig.disabled = false;
-      if (ttsTrans) ttsTrans.disabled = false;
-      if (ttsStop) ttsStop.disabled = false;
 
       // History
       if (histEmpty) histEmpty.hidden = true;
@@ -158,5 +184,11 @@
         adapter.init();
       });
     }
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initController);
+  } else {
+    initController();
+  }
 })();

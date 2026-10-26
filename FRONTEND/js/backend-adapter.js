@@ -10,6 +10,7 @@
       this.activeTransport = this.config.transport; // 'auto' | 'websocket' | 'http'
       this.ws = null;
       this.state = 'checking'; // 'checking' | 'connected' | 'disconnected'
+      this.lastMessage = 'Connecting to backend...';
       this.listeners = { status: [], prediction: [], frameCount: [] };
       this.framesSent = 0;
       this.framesSkipped = 0;
