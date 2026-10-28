@@ -69,3 +69,4 @@ Thumbs.db
 frontend/node_modules/
 frontend/dist/
 frontend/.env
+models/handshayak_model.joblib
