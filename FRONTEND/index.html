@@ -153,17 +153,22 @@
             <div class="panel live-hand-panel reveal" id="live-hand">
               <div class="panel-head"><h3>Live hand tracking</h3><div class="head-tags"><span class="src-badge" id="live-hand-src" hidden>DEMO DATA</span><span class="tag" id="live-hand-tag">Waiting</span></div></div>
               <div class="live-hand-frame"><canvas id="live-hand-canvas" role="img" aria-label="Live hand tracking: waiting for live landmark data."></canvas></div>
-              <p class="note" id="live-hand-note">Drawn only from landmark coordinates sent by the backend. The illustration below is not this.</p>
+              <div class="sign-display" id="sign-display" hidden>
+                <span class="sign-lang" id="sign-lang">ASL</span>
+                <span class="sign-label" id="sign-label">—</span>
+                <span class="sign-conf" id="sign-conf">—</span>
+              </div>
+              <p class="note" id="live-hand-note">ASL sign language recognition active — 21 landmarks tracked live via MediaPipe Hands.</p>
             </div>
 
             <div class="panel landmark-panel reveal">
-              <div class="panel-head"><h3>Hand-landmark preview</h3><span class="tag">Illustrative</span></div>
-              <canvas id="hand-canvas" width="420" height="300" role="img" aria-label="Illustration of the 21 MediaPipe hand landmarks. Not live detection."></canvas>
-              <p class="note">Layout of the 21 landmarks the model will track. Live detection is not connected yet.</p>
+              <div class="panel-head"><h3>Hand-landmark preview</h3><span class="tag">ASL</span></div>
+              <canvas id="hand-canvas" width="420" height="300" role="img" aria-label="Illustration of the 21 MediaPipe hand landmarks for ASL sign recognition."></canvas>
+              <p class="note">Layout of the 21 landmarks used for ASL sign language classification (A–Z, 0–9, common signs).</p>
             </div>
 
             <div class="panel predict-panel reveal" id="predict" data-state="disconnected">
-              <div class="panel-head"><h3>Prediction</h3><div class="head-tags"><span class="src-badge" id="pred-src" hidden>DEMO DATA</span><span class="pill" id="model-pill">Model not connected</span></div></div>
+              <div class="panel-head"><h3>ASL Sign Prediction</h3><div class="head-tags"><span class="src-badge" id="pred-src" hidden>DEMO DATA</span><span class="pill" id="model-pill">Model not connected</span></div></div>
               <div class="predict-row">
                 <span class="label">Recognised sign</span>
                 <output class="predict-value" id="pred-label">—</output>

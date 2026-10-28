@@ -265,10 +265,18 @@
     if (!wantListening || !recognition) return;
     recognition.lang = el.lang.value;
     try {
-      if (el.feed.checked && audio && audio.track) { usingTrack = true; recognition.start(audio.track); }
-      else { usingTrack = false; recognition.start(); }
+      if (el.feed.checked && audio && audio.track) { usingTrack = true; }
+      else { usingTrack = false; }
+      recognition.start();
     } catch (e) {
-      if (e.name !== 'InvalidStateError') { console.error(e); fatal('Could not start recognition: ' + e.message); }
+      if (e.name === 'InvalidStateError') {
+        // Already running — reset and retry once
+        try { recognition.stop(); } catch { /* ignore */ }
+        setTimeout(() => { if (wantListening) recognition.start(); }, 100);
+        return;
+      }
+      console.error(e);
+      fatal('Could not start recognition: ' + (e.message || e.name));
     }
   }
 

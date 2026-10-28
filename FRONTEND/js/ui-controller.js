@@ -146,6 +146,16 @@
         histList.prepend(li);
         while (histList.children.length > 20) histList.removeChild(histList.lastChild);
       }
+
+      // Live hand panel sign display
+      const signDisplay = document.getElementById('sign-display');
+      const signLabel = document.getElementById('sign-label');
+      const signConf = document.getElementById('sign-conf');
+      if (signDisplay && signLabel && signConf && res.label) {
+        signDisplay.hidden = false;
+        signLabel.textContent = res.label;
+        signConf.textContent = Math.round(res.confidence * 100) + '%';
+      }
     });
 
     // Speech handlers

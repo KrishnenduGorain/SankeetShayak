@@ -28,9 +28,9 @@ class MediaPipeline:
     def __init__(
         self,
         model_path: Optional[str] = None,
-        min_hand_detection_confidence: float = 0.5,
-        min_hand_presence_confidence: float = 0.5,
-        min_tracking_confidence: float = 0.5,
+        min_hand_detection_confidence: float = 0.7,
+        min_hand_presence_confidence: float = 0.7,
+        min_tracking_confidence: float = 0.7,
         target_fps: float = 30.0,
     ):
         self.detector = HandLandmarkDetector(

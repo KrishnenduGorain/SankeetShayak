@@ -55,6 +55,12 @@ select option { background: #08192f; color: #f7fbff; }
 .live-hand-frame canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 #live-hand[data-state="tracking"] #live-hand-tag { color: var(--ok); border-color: rgba(94,234,212,.35); background: rgba(94,234,212,.1); }
 
+/* sign display on live hand panel */
+.sign-display { margin-top: 12px; padding: 10px 14px; border-radius: 10px; background: rgba(2,8,18,.7); border: 1px solid var(--line); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.sign-lang { font: 700 11px var(--mono); letter-spacing: .12em; color: var(--cyan-2); background: rgba(49,208,226,.12); border: 1px solid rgba(49,208,226,.3); padding: 4px 10px; border-radius: 99px; }
+.sign-label { font: 700 28px var(--display); color: var(--white); letter-spacing: .02em; }
+.sign-conf { font: 500 13px var(--mono); color: var(--cyan-2); background: rgba(49,208,226,.1); padding: 4px 10px; border-radius: 99px; border: 1px solid rgba(49,208,226,.2); }
+
 /* ---------- backend / translation / history row ---------- */
 .demo-extra { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; margin-top: 22px; align-items: start; }
 .be-msg { color: var(--white); font-size: 14.5px; line-height: 1.55; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: rgba(2,8,18,.5); min-height: 48px; }

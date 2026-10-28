@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 import numpy as np
 
+from src.data.asl_signs import LETTERS, NUMBERS, COMMON_SIGNS, BASE, get_signs
+
 
 @dataclass
 class RecordedGesture:
@@ -41,7 +43,7 @@ class GestureDatasetBuilder:
         """Save a single gesture trajectory to disk as JSON.
 
         Args:
-            label: Sign label (e.g., 'tap_gentle', 'tap_forceful').
+            label: Sign label (e.g., 'A', 'B', 'HELLO').
             trajectory: Array of shape (T, 21, 3).
             subject_id: Identifier of the person performing the sign.
             fps: Frame rate of recording.
@@ -67,61 +69,84 @@ class GestureDatasetBuilder:
         return file_path
 
     @staticmethod
+    def _build_handshape(sign_dict):
+        """Build full 21-landmark array from fingertip dict."""
+        traj = [list(p) for p in BASE]
+        # Tip indices
+        tips = {4, 8, 12, 16, 20}
+        for k, v in sign_dict.items():
+            idx = int(k)
+            traj[idx] = list(v)
+        # Interpolate intermediate joints
+        # Finger joint chains
+        chains = [
+            [5, 6, 7, 8],    # index
+            [9, 10, 11, 12], # middle
+            [13, 14, 15, 16],# ring
+            [17, 18, 19, 20],# pinky
+        ]
+        for chain in chains:
+            palm = traj[chain[0]]
+            tip = traj[chain[-1]]
+            for i in range(1, len(chain)):
+                t = i / len(chain)
+                traj[chain[i]] = [palm[j] + (tip[j] - palm[j]) * t for j in range(3)]
+        # Thumb chain
+        thumb_chain = [1, 2, 3, 4]
+        palm = traj[1]
+        tip = traj[4]
+        for i in range(1, 4):
+            t = [0.35, 0.55, 0.75][i - 1]
+            traj[thumb_chain[i]] = [palm[j] + (tip[j] - palm[j]) * t for j in range(3)]
+        return np.array(traj, dtype=np.float64)
+
+    @staticmethod
     def generate_synthetic_gestures(
         samples_per_class: int = 20,
         fps: float = 30.0,
         frames_per_sample: int = 30
-    ) -> Tuple[np.ndarray, np.ndarray, List[str]]:
-        """Generate physically distinct synthetic gestures for training and testing.
+    ) -> Tuple[List[np.ndarray], np.ndarray, List[str]]:
+        """Generate ASL sign language handshapes for training and testing.
 
-        Simulates 4 benchmark classes:
-        1. 'tap_gentle': Slow downward tap (low velocity, low kinetic energy)
-        2. 'tap_forceful': Fast abrupt strike (high velocity, high acceleration, high jerk)
-        3. 'swipe_slow': Steady horizontal translation (medium velocity, low jerk)
-        4. 'swipe_rapid': Rapid flick (high velocity, high jerk)
+        Covers:
+        - ASL Alphabet: A-Z (26 classes)
+        - ASL Numbers: 0-9 (10 classes)
+        - Common Signs: HELLO, YES, NO, THANK_YOU, PLEASE, SORRY, I_LOVE_YOU, HELP, STOP, MORE, EAT, DRINK (12 classes)
+
+        Total: 48 distinct sign classes.
 
         Returns:
             Tuple of (trajectories: List of arrays (T, 21, 3), labels: array (N,), class_names)
         """
-        classes = ["tap_gentle", "tap_forceful", "swipe_slow", "swipe_rapid"]
+        classes = get_signs()
         trajectories = []
         labels = []
 
         dt = 1.0 / fps
         t = np.linspace(0, (frames_per_sample - 1) * dt, frames_per_sample)
 
-        for class_idx, class_name in enumerate(classes):
+        # Combine all sign dictionaries
+        all_signs = {}
+        all_signs.update(LETTERS)
+        all_signs.update(NUMBERS)
+        all_signs.update(COMMON_SIGNS)
+
+        for class_name in classes:
+            sign_dict = all_signs.get(class_name, LETTERS['A'])  # fallback to A
+            base_shape = GestureDatasetBuilder._build_handshape(sign_dict)
+
             for _ in range(samples_per_class):
-                # Base resting hand: 21 landmarks centered at wrist (0, 0, 0)
-                base_hand = np.zeros((21, 3), dtype=np.float64)
-                # Spread out finger joints naturally
-                for finger in range(5):
-                    for joint in range(1, 5):
-                        idx = finger * 4 + joint
-                        base_hand[idx] = [(finger - 2) * 0.15, joint * 0.2, 0.0]
+                # Tile base shape across frames
+                sample_traj = np.tile(base_shape, (frames_per_sample, 1, 1))
 
-                sample_traj = np.tile(base_hand, (frames_per_sample, 1, 1))
-
-                # Add noise
-                noise = np.random.normal(0, 0.005, size=sample_traj.shape)
+                # Add small temporal variation (slight wobble)
+                noise = np.random.normal(0, 0.003, size=sample_traj.shape)
                 sample_traj += noise
 
-                if class_name == "tap_gentle":
-                    # Gentle tap: smooth sine wave with low peak velocity
-                    vy = -0.3 * np.sin(np.pi * t / t[-1])
-                    sample_traj[:, :, 1] += vy[:, None]
-                elif class_name == "tap_forceful":
-                    # Forceful strike: sharp quadratic descent, abrupt stop (high jerk)
-                    vy = -1.2 * np.sin(np.pi * t / t[-1]) ** 3
-                    sample_traj[:, :, 1] += vy[:, None]
-                elif class_name == "swipe_slow":
-                    # Steady slow horizontal swipe
-                    vx = 0.4 * (t / t[-1])
-                    sample_traj[:, :, 0] += vx[:, None]
-                elif class_name == "swipe_rapid":
-                    # Rapid flick: fast exponential swipe
-                    vx = 1.5 * (t / t[-1]) ** 2
-                    sample_traj[:, :, 0] += vx[:, None]
+                # Add slight frame-to-frame variation for realism
+                phase = np.random.random() * 2 * np.pi
+                wobble = np.sin(np.linspace(phase, phase + 2 * np.pi, frames_per_sample))[:, None, None] * 0.002
+                sample_traj += wobble * np.random.normal(0, 1, (frames_per_sample, 21, 3))
 
                 trajectories.append(sample_traj)
                 labels.append(class_name)
