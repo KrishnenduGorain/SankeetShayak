@@ -80,11 +80,11 @@
   class SignRecognizer {
     constructor() {
       this.history = [];
-      this.historySize = 6;
+      this.historySize = 8;
       this.lastLabel = null;
       this.lastConf = 0;
       this.stableCount = 0;
-      this.confidenceThreshold = 0.50;
+      this.confidenceThreshold = 0.55;
     }
 
     /**
@@ -166,11 +166,16 @@
 
       // --- SIGN EVALUATIONS ---
 
-      // 1. F or OK: Thumb & Index pinched in ring, Middle, Ring, Pinky extended
-      if (isPinchThumbIndex && extMiddle && extRing && extPinky && !extIndex) {
+      // 1. F: Thumb & Index pinched, middle/ring/pinky extended, index not extended
+      if (isPinchThumbIndex && extMiddle && extRing && extPinky && !extIndex && curledIndex) {
         addScore('F', 0.95);
-        addScore('OK', 0.92);
         addScore('9', 0.88);
+      }
+
+      // OK: Thumb & Index pinched, middle/ring/pinky extended — similar to F but scored separately
+      // OK is commonly shown with all 3 fingers quite extended and the circle held more forward
+      if (isPinchThumbIndex && extMiddle && extRing && extPinky && !extIndex) {
+        addScore('OK', 0.82);
       }
 
       // 2. I_LOVE_YOU: Thumb, Index, Pinky extended, Middle & Ring curled
@@ -194,14 +199,15 @@
       }
 
       // 6. V / PEACE / 2: Index & Middle extended spread apart, Ring & Pinky curled
-      if (extIndex && extMiddle && curledRing && curledPinky && !extThumb && dIndexMid > 0.28) {
+      // Spread threshold: dIndexMid > 0.25 (was 0.28, slightly lower for better recall)
+      if (extIndex && extMiddle && curledRing && curledPinky && !extThumb && dIndexMid > 0.25) {
         addScore('V', 0.95);
-        addScore('2', 0.92);
         addScore('PEACE', 0.90);
+        addScore('2', 0.85);
       }
 
       // 7. U: Index & Middle extended tightly together, Ring & Pinky curled
-      if (extIndex && extMiddle && curledRing && curledPinky && !extThumb && dIndexMid <= 0.28) {
+      if (extIndex && extMiddle && curledRing && curledPinky && !extThumb && dIndexMid <= 0.25) {
         addScore('U', 0.93);
       }
 
