@@ -19,10 +19,10 @@
       
       // REST streaming buffer
       this.restBuffer = [];
-      this.minRestFrames = 20;
+      this.minRestFrames = 8;
       this.isPredicting = false;
       this.lastPredictTime = 0;
-      this.predictThrottleMs = 600; // minimum ms between REST predictions
+      this.predictThrottleMs = 350; // minimum ms between REST predictions
     }
 
     on(event, fn) {

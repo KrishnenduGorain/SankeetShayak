@@ -49,6 +49,7 @@
       </a>
       <nav id="site-nav" aria-label="Main navigation">
         <a href="#demo">Demo</a>
+        <a href="#sign-guide">Sign Guide</a>
         <a href="#pipeline">How it works</a>
         <a href="#physics">Motion &amp; physics</a>
         <a href="#compare">Approaches</a>
@@ -122,6 +123,11 @@
                 <small>Start the camera or upload a clip to begin</small>
               </div>
               <div class="stage-busy" id="stage-busy" hidden><span class="spinner"></span> Requesting camera…</div>
+              <div class="stage-sign-overlay" id="stage-sign-overlay" hidden aria-live="polite">
+                <span class="sso-badge">RECOGNIZED SIGN</span>
+                <span class="sso-val" id="stage-sign-val">—</span>
+                <span class="sso-sub" id="stage-sign-sub">—</span>
+              </div>
               <div class="scan" aria-hidden="true"></div>
               <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
               <span class="source-badge" id="source-badge" hidden>LIVE</span>
@@ -256,8 +262,29 @@
             <p class="hist-empty" id="hist-empty">No predictions received yet in this session.</p>
             <ol class="history" id="hist-list" aria-label="Predictions received in this session"></ol>
             <p class="note">Session only: held in memory for this page visit and not saved anywhere. Reloading or closing the tab clears it.</p>
-          </div>
         </div>
+
+        <!-- ============ SIGN LANGUAGE GUIDE & REFERENCE ============ -->
+        <section class="sign-guide-panel panel reveal" id="sign-guide" aria-labelledby="guide-title">
+          <div class="panel-head">
+            <div>
+              <h3 id="guide-title">Interactive Sign Language Reference (ASL)</h3>
+              <p class="note">Show any of these signs to your camera for instant zero-latency recognition. Click any card to preview the hand shape.</p>
+            </div>
+            <div class="head-tags">
+              <span class="src-badge">42+ SIGNS SUPPORTED</span>
+            </div>
+          </div>
+          
+          <div class="guide-tabs" role="tablist" aria-label="Sign Language Categories">
+            <button class="guide-tab active" data-cat="all" type="button" role="tab" aria-selected="true">All Signs</button>
+            <button class="guide-tab" data-cat="Alphabet" type="button" role="tab" aria-selected="false">Alphabet (A–Z)</button>
+            <button class="guide-tab" data-cat="Number" type="button" role="tab" aria-selected="false">Numbers (0–9)</button>
+            <button class="guide-tab" data-cat="Common" type="button" role="tab" aria-selected="false">Common Signs</button>
+          </div>
+
+          <div class="guide-grid" id="guide-grid" role="region" aria-label="Sign Cards"></div>
+        </section>
       </div>
     </section>
 
@@ -501,6 +528,7 @@
   <script src="js/charts.js"></script>
   <script src="js/landmark-view.js"></script>
   <script src="js/speech.js"></script>
+  <script src="js/sign-recognizer.js"></script>
   <script src="js/backend-adapter.js"></script>
   <script src="js/frame-sender.js"></script>
   <script src="script.js"></script>

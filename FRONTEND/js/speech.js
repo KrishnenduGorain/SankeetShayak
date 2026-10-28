@@ -54,6 +54,9 @@
     'more': { en: 'More', hi: 'और', bn: 'আরও' },
     'eat': { en: 'Eat', hi: 'खाना', bn: 'খাও' },
     'drink': { en: 'Drink', hi: 'पीना', bn: 'খাও' },
+    'ok': { en: 'OK', hi: 'ठीक है', bn: 'ঠিক আছে' },
+    'peace': { en: 'Peace', hi: 'शांति', bn: 'শান্তি' },
+    'rock': { en: 'Rock', hi: 'रॉक', bn: 'রক' },
     // Legacy (for backward compatibility)
     'swipe_slow': { en: 'Slow Swipe', hi: 'धीमी स्वाइप', bn: 'ধীর সোয়াইপ' },
     'swipe_rapid': { en: 'Rapid Swipe', hi: 'तेज़ स्वाइप', bn: 'দ্রুত সোয়াইপ' },
