@@ -124,6 +124,152 @@ select option { background: #08192f; color: #f7fbff; }
 .mx-legend li { display: inline-flex; align-items: center; gap: 6px; }
 .mx-legend i { width: 14px; height: 3px; border-radius: 2px; }
 
+/* ---------- on-screen camera HUD sign overlay ---------- */
+.stage-sign-overlay {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  padding: 10px 16px;
+  background: rgba(3, 12, 28, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(49, 208, 226, 0.45);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(49, 208, 226, 0.25);
+  border-radius: 12px;
+  pointer-events: none;
+  animation: ssoPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes ssoPop {
+  0% { transform: scale(0.92); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.sso-badge {
+  font: 700 10px var(--mono);
+  letter-spacing: 0.12em;
+  color: var(--cyan);
+  text-transform: uppercase;
+}
+.sso-val {
+  font: 800 32px var(--display);
+  line-height: 1.1;
+  color: #ffffff;
+  text-shadow: 0 0 12px rgba(49, 208, 226, 0.6);
+}
+.sso-sub {
+  font: 500 12px var(--mono);
+  color: var(--cyan-2);
+}
+
+/* ---------- interactive sign language guide ---------- */
+.sign-guide-panel {
+  margin-top: 26px;
+  padding: 24px 28px;
+  background: rgba(4, 15, 31, 0.7);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+.guide-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 18px 0 20px;
+}
+.guide-tab {
+  padding: 8px 18px;
+  border-radius: 99px;
+  font: 600 13px var(--font);
+  border: 1px solid var(--line);
+  background: rgba(2, 8, 18, 0.6);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.guide-tab:hover {
+  color: #ffffff;
+  border-color: rgba(49, 208, 226, 0.5);
+}
+.guide-tab.active {
+  background: rgba(49, 208, 226, 0.15);
+  border-color: var(--cyan);
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(49, 208, 226, 0.25);
+}
+.guide-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 12px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+.guide-grid::-webkit-scrollbar { width: 6px; }
+.guide-grid::-webkit-scrollbar-thumb { background: rgba(49, 208, 226, 0.3); border-radius: 99px; }
+.guide-card {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(6, 20, 42, 0.65);
+  border: 1px solid rgba(139, 123, 255, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+.guide-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--cyan);
+  background: rgba(9, 28, 58, 0.85);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3), 0 0 12px rgba(49, 208, 226, 0.2);
+}
+.guide-card.active-detected {
+  border-color: var(--ok);
+  background: rgba(16, 68, 70, 0.7);
+  box-shadow: 0 0 18px rgba(94, 234, 212, 0.4);
+  transform: scale(1.03);
+}
+.gc-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.gc-label {
+  font: 800 22px var(--display);
+  color: #ffffff;
+  line-height: 1;
+}
+.gc-cat {
+  font: 700 9px var(--mono);
+  color: var(--cyan-2);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(49, 208, 226, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.gc-tr {
+  font: 600 12px var(--sans-hi);
+  color: rgba(220, 235, 255, 0.85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gc-desc {
+  font: 400 11px var(--font);
+  color: var(--muted);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 /* ---------- responsive ---------- */
 @media (max-width: 1100px) {
   .demo-extra { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -137,7 +283,9 @@ select option { background: #08192f; color: #f7fbff; }
   .tr-text { font-size: 20px; }
   .mx-readout { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .kv { grid-template-columns: 1fr; }
+  .guide-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
 }
 @media (prefers-reduced-motion: reduce) {
   .skeleton, .state-pill .state-dot { animation: none !important; }
 }
+

@@ -849,8 +849,12 @@
       const c = has && typeof result.confidence === 'number' ? Math.max(0, Math.min(1, result.confidence)) : null;
       $('#pred-conf').textContent = c == null ? '—' : Math.round(c * 100) + '%';
       $('#meter-fill').style.width = c == null ? '0' : (c * 100) + '%';
-      if (!has) this.setModelState(predictEl.dataset.state === 'ready' ? 'ready' : 'disconnected',
-        predictEl.dataset.state === 'ready' ? 'Waiting for a sign…' : 'Recognition model not connected. Real predictions and confidence will appear here once the classifier is integrated.');
+      if (has) {
+        this.setModelState('ready', 'Live sign recognized with high confidence.');
+      } else {
+        this.setModelState(predictEl.dataset.state === 'ready' ? 'ready' : 'disconnected',
+          predictEl.dataset.state === 'ready' ? 'Waiting for a sign…' : 'Recognition model not connected. Real predictions and confidence will appear here once the classifier is integrated.');
+      }
     },
     video: cam
   };

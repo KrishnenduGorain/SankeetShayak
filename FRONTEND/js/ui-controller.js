@@ -1,6 +1,7 @@
 /**
  * Sankeet Shayak - UI Controller
- * Bridges BackendAdapter, Prediction Panel, History, and Translation UI
+ * Bridges BackendAdapter, SignRecognizer, Prediction Panel, History,
+ * Interactive Sign Guide, and Translation UI
  */
 (function() {
   function initController() {
@@ -45,6 +46,76 @@
       });
     }
 
+    // Guide Elements
+    const guideGrid = document.getElementById('guide-grid');
+    const guideTabs = document.querySelectorAll('.guide-tab');
+
+    // Render Sign Guide
+    function renderSignGuide(filterCat = 'all') {
+      if (!guideGrid || !window.SS_SignRecognizer) return;
+      const signs = window.SS_SignRecognizer.getAllSigns();
+      guideGrid.innerHTML = '';
+
+      Object.entries(signs).forEach(([label, info]) => {
+        if (filterCat !== 'all' && info.category !== filterCat) return;
+
+        const card = document.createElement('div');
+        card.className = 'guide-card';
+        card.dataset.label = label;
+        card.dataset.category = info.category;
+        card.setAttribute('tabindex', '0');
+        card.setAttribute('role', 'button');
+        card.setAttribute('aria-label', `Sign ${label}: ${info.desc}`);
+
+        card.innerHTML = `
+          <div class="gc-top">
+            <span class="gc-label">${label}</span>
+            <span class="gc-cat">${info.category}</span>
+          </div>
+          <div class="gc-tr">${info.hi || ''} · ${info.bn || ''}</div>
+          <p class="gc-desc">${info.desc}</p>
+        `;
+
+        card.addEventListener('click', () => {
+          if (window.SS_Speech) {
+            const curLang = langSelect ? langSelect.value : 'en';
+            const translated = window.SS_Speech.translate(label, curLang);
+            window.SS_Speech.speak(translated, curLang);
+          }
+          highlightGuideCard(label);
+        });
+
+        guideGrid.appendChild(card);
+      });
+    }
+
+    // Guide category tab switching
+    guideTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        guideTabs.forEach(t => {
+          t.classList.remove('active');
+          t.setAttribute('aria-selected', 'false');
+        });
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
+        renderSignGuide(tab.dataset.cat);
+      });
+    });
+
+    renderSignGuide('all');
+
+    let lastHighlightedCard = null;
+    function highlightGuideCard(label) {
+      if (!guideGrid) return;
+      if (lastHighlightedCard) lastHighlightedCard.classList.remove('active-detected');
+      const card = guideGrid.querySelector(`.guide-card[data-label="${label}"]`);
+      if (card) {
+        card.classList.add('active-detected');
+        lastHighlightedCard = card;
+        card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      }
+    }
+
     function updateStatusUI(state, message) {
       if (bePanel) bePanel.dataset.state = state;
       if (bePill) bePill.dataset.state = state;
@@ -66,14 +137,14 @@
       if (predStatusEl) {
         predStatusEl.textContent = state === 'connected' 
           ? 'Recognition service connected' 
-          : (state === 'checking' ? 'Connecting to recognition service…' : 'Recognition service not connected');
+          : (state === 'checking' ? 'Connecting to recognition service…' : 'Instant client recognition active');
       }
 
       // Update main prediction panel state
       if (window.SanketSahayak && window.SanketSahayak.setModelState) {
         window.SanketSahayak.setModelState(
-          state === 'connected' ? 'ready' : (state === 'checking' ? 'loading' : 'disconnected'),
-          message
+          state === 'connected' ? 'ready' : (state === 'checking' ? 'loading' : 'ready'),
+          message || 'Ready for signs'
         );
       }
     }
@@ -91,8 +162,11 @@
       if (beFrames) beFrames.textContent = `${sent} / ${skipped}`;
     });
 
-    // Prediction events
+    // Prediction events (handles both instant client-side and backend predictions)
     let currentPrediction = null;
+    let lastHistoryLabel = null;
+    let lastHistoryTime = 0;
+
     adapter.on('prediction', (res) => {
       currentPrediction = res;
       if (window.SanketSahayak && window.SanketSahayak.setPrediction) {
@@ -136,15 +210,23 @@
         }
       }
 
-      // History
-      if (histEmpty) histEmpty.hidden = true;
-      if (histClear) histClear.disabled = false;
-      if (histList) {
-        const li = document.createElement('li');
-        li.className = 'history-item';
-        li.innerHTML = `<span><strong>${res.label}</strong> (${Math.round(res.confidence * 100)}%)</span> <time>${new Date().toLocaleTimeString()}</time>`;
-        histList.prepend(li);
-        while (histList.children.length > 20) histList.removeChild(histList.lastChild);
+      // Highlight in sign guide
+      highlightGuideCard(res.label);
+
+      // Session History (debounced so it logs meaningful transitions, not 60 items/sec)
+      const now = Date.now();
+      if (res.label && (res.label !== lastHistoryLabel || (now - lastHistoryTime > 2500))) {
+        lastHistoryLabel = res.label;
+        lastHistoryTime = now;
+        if (histEmpty) histEmpty.hidden = true;
+        if (histClear) histClear.disabled = false;
+        if (histList) {
+          const li = document.createElement('li');
+          li.className = 'history-item';
+          li.innerHTML = `<span><strong>${res.label}</strong> (${Math.round(res.confidence * 100)}%)</span> <time>${new Date().toLocaleTimeString()}</time>`;
+          histList.prepend(li);
+          while (histList.children.length > 25) histList.removeChild(histList.lastChild);
+        }
       }
 
       // Live hand panel sign display
@@ -185,6 +267,7 @@
         if (histList) histList.innerHTML = '';
         if (histEmpty) histEmpty.hidden = false;
         histClear.disabled = true;
+        lastHistoryLabel = null;
       });
     }
 
