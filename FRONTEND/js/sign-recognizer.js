@@ -7,7 +7,7 @@
 (function() {
   'use strict';
 
-  // Distance helper
+  // Distance helper in 3D
   function dist(p1, p2) {
     const dx = p1.x - p2.x;
     const dy = p1.y - p2.y;
@@ -26,7 +26,7 @@
   const SIGN_METADATA = {
     // Alphabet
     'A': { category: 'Alphabet', desc: 'Fist with thumb resting beside index pointing up', hi: 'ए', bn: 'এ' },
-    'B': { category: 'Alphabet', desc: 'Four fingers straight up, thumb tucked across palm', hi: 'बी', bn: 'বি' },
+    'B': { category: 'Alphabet', desc: 'Four fingers straight up tightly together, thumb tucked across palm', hi: 'बी', bn: 'বি' },
     'C': { category: 'Alphabet', desc: 'Fingers and thumb curved into a C cup shape', hi: 'सी', bn: 'সি' },
     'D': { category: 'Alphabet', desc: 'Index pointing straight up, thumb touches middle tip in a loop', hi: 'डी', bn: 'ডি' },
     'E': { category: 'Alphabet', desc: 'All fingertips curled down touching thumb tucked beneath', hi: 'ई', bn: 'ই' },
@@ -79,11 +79,11 @@
 
   class SignRecognizer {
     constructor() {
-      this.history = [];
-      this.historySize = 8;
-      this.lastLabel = null;
-      this.lastConf = 0;
-      this.stableCount = 0;
+      this.lockedLabel = null;
+      this.lockedConf = 0;
+      this.candidateLabel = null;
+      this.candidateCount = 0;
+      this.switchFramesRequired = 2; // ~66ms response time for instant, zero-flicker transitions
       this.confidenceThreshold = 0.55;
     }
 
@@ -96,7 +96,7 @@
     classify(rawLandmarks, motionSpeed = 0) {
       if (!rawLandmarks || rawLandmarks.length !== 21) return null;
 
-      // Extract points
+      // Extract 21 landmark points
       const lm = rawLandmarks;
       const wrist = lm[0];
       const thumbCmc = lm[1], thumbMcp = lm[2], thumbIp = lm[3], thumbTip = lm[4];
@@ -109,35 +109,34 @@
       const handScale = dist(wrist, midMcp);
       if (handScale < 0.02) return null; // Too small or degenerate
 
-      // 1. Compute finger extensions (true if extended out, false if curled)
-      // A finger is extended when tip is further from wrist than PIP & MCP by margin
-      const extIndex = dist(indexTip, wrist) > dist(indexPip, wrist) * 1.15 &&
-                       dist(indexTip, wrist) > dist(indexMcp, wrist) * 1.25;
-      const curledIndex = dist(indexTip, wrist) < dist(indexPip, wrist) * 1.05 ||
-                          dist(indexTip, indexMcp) < dist(indexPip, indexMcp) * 0.95;
+      // 1. Precise joint extension ratios
+      const dIndexTipWrist = dist(indexTip, wrist);
+      const dIndexPipWrist = dist(indexPip, wrist);
+      const dIndexTipMcp = dist(indexTip, indexMcp) / handScale;
 
-      const extMiddle = dist(midTip, wrist) > dist(midPip, wrist) * 1.15 &&
-                        dist(midTip, wrist) > dist(midMcp, wrist) * 1.25;
-      const curledMiddle = dist(midTip, wrist) < dist(midPip, wrist) * 1.05 ||
-                           dist(midTip, midMcp) < dist(midPip, midMcp) * 0.95;
+      const dMidTipWrist = dist(midTip, wrist);
+      const dMidPipWrist = dist(midPip, wrist);
+      const dMidTipMcp = dist(midTip, midMcp) / handScale;
 
-      const extRing = dist(ringTip, wrist) > dist(ringPip, wrist) * 1.15 &&
-                      dist(ringTip, wrist) > dist(ringMcp, wrist) * 1.25;
-      const curledRing = dist(ringTip, wrist) < dist(ringPip, wrist) * 1.05 ||
-                         dist(ringTip, ringMcp) < dist(ringPip, ringMcp) * 0.95;
+      const dRingTipWrist = dist(ringTip, wrist);
+      const dRingPipWrist = dist(ringPip, wrist);
+      const dRingTipMcp = dist(ringTip, ringMcp) / handScale;
 
-      const extPinky = dist(pinkyTip, wrist) > dist(pinkyPip, wrist) * 1.15 &&
-                       dist(pinkyTip, wrist) > dist(pinkyMcp, wrist) * 1.25;
-      const curledPinky = dist(pinkyTip, wrist) < dist(pinkyPip, wrist) * 1.05 ||
-                          dist(pinkyTip, pinkyMcp) < dist(pinkyPip, pinkyMcp) * 0.95;
+      const dPinkyTipWrist = dist(pinkyTip, wrist);
+      const dPinkyPipWrist = dist(pinkyPip, wrist);
+      const dPinkyTipMcp = dist(pinkyTip, pinkyMcp) / handScale;
 
-      // Thumb extension & orientation
-      const thumbDistToPinky = dist(thumbTip, pinkyMcp) / handScale;
-      const thumbDistToMid = dist(thumbTip, midMcp) / handScale;
-      const extThumb = thumbDistToPinky > 0.85 && thumbDistToMid > 0.55 &&
-                       dist(thumbTip, thumbMcp) > dist(thumbIp, thumbMcp) * 1.15;
-      const thumbPointingUp = (wrist.y - thumbTip.y) / handScale > 0.65;
-      const thumbPointingDown = (thumbTip.y - wrist.y) / handScale > 0.50;
+      // True extension: fingertip is further from wrist than PIP AND tip is extended from its base MCP
+      const extIndex = dIndexTipWrist > dIndexPipWrist * 1.05 && dIndexTipMcp > 0.62;
+      const extMiddle = dMidTipWrist > dMidPipWrist * 1.05 && dMidTipMcp > 0.62;
+      const extRing = dRingTipWrist > dRingPipWrist * 1.05 && dRingTipMcp > 0.62;
+      const extPinky = dPinkyTipWrist > dPinkyPipWrist * 1.05 && dPinkyTipMcp > 0.62;
+
+      // Curled definition: tip is closer to palm or PIP
+      const curledIndex = dIndexTipWrist < dIndexPipWrist * 1.02 || dIndexTipMcp < 0.50;
+      const curledMiddle = dMidTipWrist < dMidPipWrist * 1.02 || dMidTipMcp < 0.50;
+      const curledRing = dRingTipWrist < dRingPipWrist * 1.02 || dRingTipMcp < 0.50;
+      const curledPinky = dPinkyTipWrist < dPinkyPipWrist * 1.02 || dPinkyTipMcp < 0.50;
 
       // 2. Normalized inter-finger distances
       const dThumbIndex = dist(thumbTip, indexTip) / handScale;
@@ -149,153 +148,176 @@
       const dMidRing = dist(midTip, ringTip) / handScale;
       const dRingPinky = dist(ringTip, pinkyTip) / handScale;
 
-      // Pinch checks
-      const isPinchThumbIndex = dThumbIndex < 0.40;
-      const isPinchThumbMid = dThumbMid < 0.40;
-      const isPinchThumbRing = dThumbRing < 0.40;
-      const isPinchThumbPinky = dThumbPinky < 0.40;
+      // 3. Thumb geometry (Crucial for B vs 5 vs Hello vs Fist)
+      const dThumbTipPinkyMcp = dist(thumbTip, pinkyMcp) / handScale;
+      const dThumbTipMidMcp = dist(thumbTip, midMcp) / handScale;
+      const dThumbTipIndexMcp = dist(thumbTip, indexMcp) / handScale;
+      const dThumbTipThumbMcp = dist(thumbTip, thumbMcp) / handScale;
 
-      // Total extended fingers count
-      const numExt = (extIndex ? 1 : 0) + (extMiddle ? 1 : 0) + (extRing ? 1 : 0) + (extPinky ? 1 : 0);
+      // Thumb is extended outwards (Open hand, 5, Hello, L, Y)
+      const extThumb = (dThumbTipMidMcp > 0.48 && dThumbTipIndexMcp > 0.40) ||
+                       (dThumbTipPinkyMcp > 0.70 && dThumbTipThumbMcp > 0.45);
 
-      // Score accumulator for candidates
+      // Thumb is folded across palm (Essential for B, S, A)
+      const thumbTucked = dThumbTipMidMcp < 0.42 && dThumbTipIndexMcp < 0.42 && !extThumb;
+      const thumbPointingUp = (wrist.y - thumbTip.y) / handScale > 0.60;
+      const thumbPointingDown = (thumbTip.y - wrist.y) / handScale > 0.45;
+
+      // 4. Pinch detection (Thumb tip touching respective fingertip)
+      const isPinchThumbIndex = dThumbIndex < 0.32;
+      const isPinchThumbMid = dThumbMid < 0.32;
+      const isPinchThumbRing = dThumbRing < 0.32;
+      const isPinchThumbPinky = dThumbPinky < 0.32;
+
+      // Total extended non-thumb fingers count
+      const numExtFingers = (extIndex ? 1 : 0) + (extMiddle ? 1 : 0) + (extRing ? 1 : 0) + (extPinky ? 1 : 0);
+
+      // Scores map
       const scores = {};
       const addScore = (label, score) => {
         scores[label] = (scores[label] || 0) + score;
       };
 
-      // --- SIGN EVALUATIONS ---
+      // =========================================================
+      // GESTURE RECOGNITION RULES
+      // =========================================================
 
-      // 1. F: Thumb & Index pinched, middle/ring/pinky extended, index not extended
-      if (isPinchThumbIndex && extMiddle && extRing && extPinky && !extIndex && curledIndex) {
-        addScore('F', 0.95);
+      // --- 1. OK / F / 9 ---
+      // Thumb & Index form a circle/pinch, other 3 fingers straight up
+      if (isPinchThumbIndex && extMiddle && extRing && extPinky) {
+        addScore('OK', 0.96);
+        addScore('F', 0.92);
         addScore('9', 0.88);
       }
 
-      // OK: Thumb & Index pinched, middle/ring/pinky extended — similar to F but scored separately
-      // OK is commonly shown with all 3 fingers quite extended and the circle held more forward
-      if (isPinchThumbIndex && extMiddle && extRing && extPinky && !extIndex) {
-        addScore('OK', 0.82);
+      // --- 2. PEACE / V / 2 / U ---
+      // Index & Middle extended, Ring & Pinky folded, Thumb tucked
+      if (extIndex && extMiddle && !extRing && !extPinky && !isPinchThumbIndex) {
+        if (dIndexMid > 0.22) {
+          // Spread apart = PEACE / V / 2
+          addScore('PEACE', 0.96);
+          addScore('V', 0.92);
+          addScore('2', 0.88);
+        } else {
+          // Closed together = U
+          addScore('U', 0.95);
+        }
       }
 
-      // 2. I_LOVE_YOU: Thumb, Index, Pinky extended, Middle & Ring curled
-      if (extThumb && extIndex && extPinky && curledMiddle && curledRing) {
-        addScore('I_LOVE_YOU', 0.96);
+      // --- 3. B vs 4 vs 5 vs HELLO ---
+      // Four fingers extended
+      if (extIndex && extMiddle && extRing && extPinky && !isPinchThumbIndex) {
+        if (extThumb) {
+          // All 5 fingers extended: 5 or HELLO
+          if (motionSpeed > 0.35) {
+            addScore('HELLO', 0.96);
+            addScore('5', 0.82);
+          } else {
+            addScore('5', 0.96);
+            addScore('STOP', 0.90);
+            addScore('HELLO', 0.82);
+          }
+        } else if (thumbTucked || dThumbTipIndexMcp < 0.40) {
+          // B: Thumb is strictly tucked across palm AND 4 fingers held flat and close together
+          if (dIndexMid < 0.22 && dMidRing < 0.22 && dRingPinky < 0.22) {
+            addScore('B', 0.96);
+          } else {
+            // 4: Four fingers spread apart with thumb tucked
+            addScore('4', 0.94);
+          }
+        } else {
+          // Fingers spread or thumb semi-loose
+          addScore('4', 0.92);
+          addScore('5', 0.85);
+        }
       }
 
-      // 3. ROCK / HORNS: Index & Pinky extended, Middle & Ring curled, Thumb folded
-      if (!extThumb && extIndex && extPinky && curledMiddle && curledRing) {
-        addScore('ROCK', 0.94);
+      // --- 4. I_LOVE_YOU / ROCK / Y ---
+      if (extIndex && extPinky && !extMiddle && !extRing) {
+        if (extThumb) {
+          // ILY: Thumb + Index + Pinky extended
+          addScore('I_LOVE_YOU', 0.96);
+        } else {
+          // ROCK: Index + Pinky extended, thumb folded
+          addScore('ROCK', 0.95);
+        }
       }
 
-      // 4. Y / CALL ME: Thumb & Pinky extended, Index, Middle, Ring curled
-      if (extThumb && extPinky && curledIndex && curledMiddle && curledRing) {
+      // Y (Call me): Thumb + Pinky extended, other 3 curled
+      if (extThumb && extPinky && !extIndex && !extMiddle && !extRing) {
         addScore('Y', 0.96);
       }
 
-      // 5. L: Thumb & Index extended at ~90 deg, Middle, Ring, Pinky curled
-      if (extThumb && extIndex && curledMiddle && curledRing && curledPinky && dThumbIndex > 0.60) {
+      // L: Thumb + Index extended at ~90 deg, others curled
+      if (extThumb && extIndex && !extMiddle && !extRing && !extPinky && dThumbIndex > 0.48) {
         addScore('L', 0.96);
       }
 
-      // 6. V / PEACE / 2: Index & Middle extended spread apart, Ring & Pinky curled
-      // Spread threshold: dIndexMid > 0.25 (was 0.28, slightly lower for better recall)
-      if (extIndex && extMiddle && curledRing && curledPinky && !extThumb && dIndexMid > 0.25) {
-        addScore('V', 0.95);
-        addScore('PEACE', 0.90);
-        addScore('2', 0.85);
+      // --- 5. THREE FINGERS: W / 3 ---
+      // W: Index, Middle, Ring extended, Pinky curled, Thumb folded
+      if (extIndex && extMiddle && extRing && !extPinky && !extThumb && !isPinchThumbIndex) {
+        addScore('W', 0.95);
       }
-
-      // 7. U: Index & Middle extended tightly together, Ring & Pinky curled
-      if (extIndex && extMiddle && curledRing && curledPinky && !extThumb && dIndexMid <= 0.25) {
-        addScore('U', 0.93);
-      }
-
-      // 8. W / 6 / 3:
-      // W: Index, Middle, Ring extended spread out, Pinky curled
-      if (extIndex && extMiddle && extRing && curledPinky && !extThumb) {
-        addScore('W', 0.94);
-      }
-      // 3 in ASL: Thumb, Index, Middle extended, Ring & Pinky curled
-      if (extThumb && extIndex && extMiddle && curledRing && curledPinky) {
+      // ASL 3: Thumb, Index, Middle extended, Ring and Pinky curled
+      if (extThumb && extIndex && extMiddle && !extRing && !extPinky) {
         addScore('3', 0.95);
       }
 
-      // 9. 1 / D / ONLY INDEX:
-      if (extIndex && curledMiddle && curledRing && curledPinky && !extThumb) {
+      // --- 6. SINGLE FINGER: 1 / D / I ---
+      if (extIndex && !extMiddle && !extRing && !extPinky && !extThumb) {
         if (isPinchThumbMid) {
-          addScore('D', 0.92);
+          addScore('D', 0.94);
         } else {
-          addScore('1', 0.94);
+          addScore('1', 0.95);
         }
       }
 
-      // 10. I: Only Pinky extended, Index, Middle, Ring curled
-      if (extPinky && curledIndex && curledMiddle && curledRing && !extThumb) {
-        addScore('I', 0.95);
+      // I: Only Pinky extended
+      if (extPinky && !extIndex && !extMiddle && !extRing && !extThumb) {
+        addScore('I', 0.96);
       }
 
-      // 11. B / 4:
-      // B: Four fingers extended tightly together, thumb folded across palm
-      if (extIndex && extMiddle && extRing && extPinky && !extThumb && dIndexMid < 0.32 && dMidRing < 0.32) {
-        addScore('B', 0.95);
-      }
-      // 4: Four fingers extended spread apart, thumb tucked
-      if (extIndex && extMiddle && extRing && extPinky && !extThumb && (dIndexMid >= 0.32 || dMidRing >= 0.32)) {
-        addScore('4', 0.92);
-      }
-
-      // 12. 5 / HELLO / STOP: All 5 fingers extended
-      if (extThumb && extIndex && extMiddle && extRing && extPinky) {
-        if (motionSpeed > 0.4) {
-          addScore('HELLO', 0.95);
-          addScore('5', 0.90);
-        } else {
-          addScore('5', 0.94);
-          addScore('STOP', 0.91);
-          addScore('HELLO', 0.88);
-        }
-      }
-
-      // 13. O or 0: All fingers curled forming an O
-      const allCurled = curledIndex && curledMiddle && curledRing && curledPinky;
-      if (allCurled && dThumbIndex < 0.50 && dThumbMid < 0.55 && !extThumb) {
-        addScore('O', 0.93);
-        addScore('0', 0.91);
-      }
-
-      // 14. C: Fingers curved in a C cup (neither fully straight nor fully curled into fist)
-      if (!extIndex && !curledIndex && !extMiddle && !curledMiddle && dThumbIndex > 0.45 && dThumbIndex < 0.90) {
-        addScore('C', 0.90);
-      }
-
-      // 15. A or S or YES: Fist shapes
-      if (allCurled) {
+      // --- 7. FIST SIGNS: A / S / YES / NO ---
+      const allFourCurled = curledIndex && curledMiddle && curledRing && curledPinky;
+      if (allFourCurled) {
         if (extThumb && thumbPointingUp) {
-          addScore('YES', 0.95);
+          addScore('YES', 0.96);
         } else if (extThumb && thumbPointingDown) {
-          addScore('NO', 0.90);
-        } else if (lm[4].y < lm[6].y && dThumbIndex < 0.45) {
+          addScore('NO', 0.92);
+        } else if (lm[4].y < lm[6].y && dThumbIndex < 0.42) {
           // Thumb alongside index
-          addScore('A', 0.92);
+          addScore('A', 0.94);
         } else {
-          // Thumb folded across front of fingers
-          addScore('S', 0.88);
+          // Thumb across front of curled fingers
+          addScore('S', 0.92);
         }
       }
 
-      // 16. Number 6, 7, 8 pinches (ASL numbers):
+      // --- 8. O / 0 and C ---
+      if (allFourCurled && dThumbIndex < 0.45 && dThumbMid < 0.50 && !extThumb) {
+        addScore('O', 0.94);
+        addScore('0', 0.90);
+      }
+
+      // C: Curved fingers in a cup shape
+      if (!extIndex && !curledIndex && !extMiddle && !curledMiddle && dThumbIndex > 0.45 && dThumbIndex < 0.85) {
+        addScore('C', 0.92);
+      }
+
+      // --- 9. NUMBER PINCHES: 6, 7, 8 ---
       if (isPinchThumbPinky && extIndex && extMiddle && extRing && !extPinky) {
-        addScore('6', 0.92);
+        addScore('6', 0.94);
       }
       if (isPinchThumbRing && extIndex && extMiddle && !extRing && extPinky) {
-        addScore('7', 0.92);
+        addScore('7', 0.94);
       }
       if (isPinchThumbMid && extIndex && !extMiddle && extRing && extPinky) {
-        addScore('8', 0.92);
+        addScore('8', 0.94);
       }
 
-      // Rank candidates
+      // =========================================================
+      // RANK CANDIDATES & STABLE HYSTERESIS STATE MACHINE
+      // =========================================================
       const entries = Object.entries(scores).sort((a, b) => b[1] - a[1]);
       if (entries.length === 0) {
         return null;
@@ -311,32 +333,42 @@
         probabilities[lbl] = Number((s / sum).toFixed(4));
       });
 
-      // Temporal smoothing (sliding window debounce)
-      this.history.push({ label: topLabel, conf: topConf });
-      if (this.history.length > this.historySize) this.history.shift();
+      // Zero-flicker hysteresis state machine:
+      // Prevents 1-frame glitches (like B flickering into 5, Hello, Peace, or OK)
+      if (topLabel === this.lockedLabel) {
+        this.candidateLabel = null;
+        this.candidateCount = 0;
+        this.lockedConf = topConf * 0.35 + this.lockedConf * 0.65; // Smooth confidence
+      } else {
+        if (topLabel === this.candidateLabel) {
+          this.candidateCount++;
+          if (this.candidateCount >= this.switchFramesRequired || !this.lockedLabel) {
+            this.lockedLabel = topLabel;
+            this.lockedConf = topConf;
+            this.candidateLabel = null;
+            this.candidateCount = 0;
+          }
+        } else {
+          this.candidateLabel = topLabel;
+          this.candidateCount = 1;
+        }
+      }
 
-      // Count votes in history
-      const votes = {};
-      this.history.forEach(item => {
-        votes[item.label] = (votes[item.label] || 0) + item.conf;
-      });
-      const best = Object.entries(votes).sort((a, b) => b[1] - a[1])[0];
-      const smoothLabel = best ? best[0] : topLabel;
-      const smoothConf = best ? Math.min(0.99, best[1] / this.history.length) : topConf;
-
-      const meta = SIGN_METADATA[smoothLabel] || {};
+      const activeLabel = this.lockedLabel || topLabel;
+      const activeConf = this.lockedConf || topConf;
+      const meta = SIGN_METADATA[activeLabel] || {};
 
       return {
-        label: smoothLabel,
-        confidence: Number(smoothConf.toFixed(2)),
+        label: activeLabel,
+        confidence: Number(activeConf.toFixed(2)),
         category: meta.category || 'Sign',
         description: meta.desc || '',
         probabilities: probabilities,
-        isReliable: smoothConf >= this.confidenceThreshold,
+        isReliable: activeConf >= this.confidenceThreshold,
         translations: {
-          en: smoothLabel,
-          hi: meta.hi || smoothLabel,
-          bn: meta.bn || smoothLabel
+          en: activeLabel,
+          hi: meta.hi || activeLabel,
+          bn: meta.bn || activeLabel
         }
       };
     }
@@ -350,9 +382,10 @@
     }
 
     reset() {
-      this.history = [];
-      this.lastLabel = null;
-      this.lastConf = 0;
+      this.lockedLabel = null;
+      this.lockedConf = 0;
+      this.candidateLabel = null;
+      this.candidateCount = 0;
     }
   }
 
