@@ -82,7 +82,7 @@
             const translated = window.SS_Speech.translate(label, curLang);
             window.SS_Speech.speak(translated, curLang);
           }
-          highlightGuideCard(label);
+          highlightGuideCard(label, true);
         });
 
         guideGrid.appendChild(card);
@@ -105,14 +105,16 @@
     renderSignGuide('all');
 
     let lastHighlightedCard = null;
-    function highlightGuideCard(label) {
+    function highlightGuideCard(label, scroll = false) {
       if (!guideGrid) return;
       if (lastHighlightedCard) lastHighlightedCard.classList.remove('active-detected');
       const card = guideGrid.querySelector(`.guide-card[data-label="${label}"]`);
       if (card) {
         card.classList.add('active-detected');
         lastHighlightedCard = card;
-        card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+        if (scroll) {
+          card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+        }
       }
     }
 
