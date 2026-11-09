@@ -33,9 +33,31 @@ ENV/
 env.bak/
 venv.bak/
 
-# Environment variables
+# Environment variables & secrets
 .env
-.env.local
+.env.*
+*.env
+!.env.example
+!.env.*.example
+!**/.env.example
+!**/.env.*.example
+
+# Secret keys, certificates, & credentials
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+*.pkcs12
+*.keystore
+*.jks
+*credentials*.json
+*service-account*.json
+client_secret*.json
+token.json
+credentials/
+.secrets/
 
 # MediaPipe & Model files
 *.onnx
