@@ -12,6 +12,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+Devanagari:wght@400;600&family=Noto+Sans+Bengali:wght@400;600&display=swap">
   <link rel="stylesheet" href="css/styles.css">
+  <script>
+    // Seamlessly forward to the integrated live Speech-to-Text feature on the main site
+    if (window.location.search.indexOf('standalone=true') === -1) {
+      window.location.replace('../index.html#speech-panel');
+    }
+  </script>
   <script src="js/app.js" defer></script>
 </head>
 <body>

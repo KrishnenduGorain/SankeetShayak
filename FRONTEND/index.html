@@ -54,7 +54,7 @@
         <a href="#physics">Motion &amp; physics</a>
         <a href="#compare">Approaches</a>
         <a href="#project">Project</a>
-        <a href="speech-to-text/index.html">Speech to Text</a>
+        <a href="#speech-panel">Speech to Text</a>
         <button class="credits-btn credits-btn--menu" type="button" data-credits-open aria-haspopup="dialog" aria-controls="credits-modal">Project Credits</button>
       </nav>
       <button class="credits-btn credits-btn--bar" type="button" data-credits-open aria-haspopup="dialog" aria-controls="credits-modal">
@@ -201,6 +201,77 @@
                 <ol id="pred-alts"></ol>
               </div>
               <p class="note" id="pred-note">Recognition model not connected. Real predictions and confidence will appear here once the classifier is integrated.</p>
+            </div>
+
+            <!-- ============ SPEECH TO TEXT (VOICE INPUT) ============ -->
+            <div class="panel speech-panel reveal" id="speech-panel">
+              <div class="panel-head">
+                <h3>Live Speech to Text</h3>
+                <div class="head-tags">
+                  <span class="pill" id="stt-pill">Voice Assistant</span>
+                </div>
+              </div>
+
+              <div class="stt-body">
+                <!-- Google-style Listening Microphone Centerpiece -->
+                <div class="stt-centerpiece">
+                  <div class="stt-wave-wrap" id="stt-wave-rings">
+                    <span class="stt-ring r1"></span>
+                    <span class="stt-ring r2"></span>
+                    <span class="stt-ring r3"></span>
+                  </div>
+
+                  <button class="stt-google-mic-btn" id="stt-mic-btn" type="button" aria-pressed="false" aria-label="Toggle voice input">
+                    <span class="stt-mic-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                        <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                      </svg>
+                    </span>
+                  </button>
+
+                  <!-- Google 4-Color Animated Voice Dots -->
+                  <div class="stt-dots-container" id="stt-dots" aria-hidden="true">
+                    <span class="stt-dot dot-blue"></span>
+                    <span class="stt-dot dot-red"></span>
+                    <span class="stt-dot dot-yellow"></span>
+                    <span class="stt-dot dot-green"></span>
+                  </div>
+
+                  <p class="stt-status-text" id="stt-status-text">Microphone off. Tap to speak.</p>
+                </div>
+
+                <!-- Language selection -->
+                <div class="stt-lang-row">
+                  <label class="label" for="stt-lang">Spoken Language</label>
+                  <select id="stt-lang" class="stt-select">
+                    <option value="en-IN" selected>English (India)</option>
+                    <option value="en-US">English (United States)</option>
+                    <option value="en-GB">English (United Kingdom)</option>
+                    <option value="hi-IN">हिन्दी (Hindi)</option>
+                    <option value="bn-IN">বাংলা (Bengali)</option>
+                    <option value="ta-IN">தமிழ் (Tamil)</option>
+                    <option value="te-IN">తెలుగు (Telugu)</option>
+                    <option value="mr-IN">मराठी (Marathi)</option>
+                    <option value="es-ES">Español</option>
+                    <option value="fr-FR">Français</option>
+                  </select>
+                </div>
+
+                <!-- Spoken Words Text Area -->
+                <div class="stt-transcript-box">
+                  <span class="label">Spoken words transcript</span>
+                  <textarea id="stt-output" class="stt-textarea" rows="3" placeholder="Speak into your microphone… words will appear here in real time" spellcheck="true"></textarea>
+                  <div class="stt-interim" id="stt-interim" aria-live="polite"></div>
+                </div>
+
+                <!-- Action Controls -->
+                <div class="stt-actions">
+                  <button class="button button-outline small" id="stt-copy-btn" type="button">Copy text</button>
+                  <button class="button button-outline small" id="stt-speak-btn" type="button">Speak aloud</button>
+                  <button class="button button-ghost small" id="stt-clear-btn" type="button">Clear</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -531,6 +602,7 @@
   <script src="js/sign-recognizer.js"></script>
   <script src="js/backend-adapter.js"></script>
   <script src="js/frame-sender.js"></script>
+  <script src="js/speech-to-text.js"></script>
   <script src="script.js"></script>
   <script src="js/ui-controller.js"></script>
 </body>
