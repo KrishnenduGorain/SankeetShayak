@@ -54,10 +54,43 @@ venv.bak/
 *.jks
 *credentials*.json
 *service-account*.json
+serviceAccountKey*.json
 client_secret*.json
 token.json
+google-services.json
+GoogleService-Info.plist
+secrets.*
+private.*
 credentials/
 .secrets/
+id_rsa*
+id_ed25519*
+
+# Cloud & Deployment Auth/State
+.aws/
+.gcp/
+.azure/
+.vercel/
+.netlify/
+.serverless/
+firebase-debug.log*
+firestore-debug.log*
+
+# Databases & local dumps (prevent data/credential leaks)
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+
+# Logs & Session Histories
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.bash_history
+.zsh_history
+.node_repl_history
+.python_history
 
 # MediaPipe & Model files
 *.onnx
@@ -87,9 +120,13 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
-# Frontend
+# Frontend & Dependencies
+node_modules/
+*/node_modules/
 frontend/node_modules/
+FRONTEND/node_modules/
 frontend/dist/
+FRONTEND/dist/
 frontend/.env
 models/handshayak_model.joblib
 BACKEND/models/handshayak_model.joblib
