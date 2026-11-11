@@ -1,22 +1,17 @@
 /**
  * Sankeet Shayak - Google-Style Live Speech to Text Module
- * Integrated directly on the main dashboard under the sign language recognition output.
+ * Bulletproof Web Speech API implementation with zero audio device conflicts.
  */
-(function() {
+(function () {
   'use strict';
 
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-  const state = {
-    listening: false,
-    recognition: null,
-    audioCtx: null,
-    analyser: null,
-    mediaStream: null,
-    animFrame: null,
-    restartTimer: null,
-    lang: 'en-IN'
-  };
+  let recognition = null;
+  let isListening = false;
+  let finalTranscript = '';
+  let restartTimer = null;
+  let currentLang = 'en-IN';
 
   function init() {
     const micBtn = document.getElementById('stt-mic-btn');
@@ -33,37 +28,37 @@
     if (!micBtn) return;
 
     if (!SR) {
-      if (statusText) statusText.textContent = 'Voice recognition not supported in this browser. Use Chrome, Edge or Safari.';
+      if (statusText) statusText.textContent = 'Voice recognition not supported in this browser. Please use Chrome, Edge or Safari.';
       micBtn.disabled = true;
-      micBtn.classList.add('disabled');
+      micBtn.style.opacity = '0.5';
       return;
     }
 
-    // Load saved language if available
+    // Restore saved language preference or default to English (India)
     try {
       const savedLang = localStorage.getItem('sankeet_stt_lang');
       if (savedLang && langSelect) {
         langSelect.value = savedLang;
-        state.lang = savedLang;
+        currentLang = savedLang;
+      } else if (langSelect) {
+        currentLang = langSelect.value;
       }
     } catch (_) {}
 
-    function updateUi(isListening) {
-      state.listening = isListening;
-      micBtn.setAttribute('aria-pressed', String(isListening));
-      micBtn.classList.toggle('is-listening', isListening);
+    function updateUiState(listening) {
+      isListening = listening;
+      micBtn.setAttribute('aria-pressed', String(listening));
+      micBtn.classList.toggle('is-listening', listening);
 
-      if (dotsWrap) {
-        dotsWrap.classList.toggle('active', isListening);
-      }
-      if (waveRings) {
-        waveRings.classList.toggle('active', isListening);
-      }
+      if (dotsWrap) dotsWrap.classList.toggle('active', listening);
+      if (waveRings) waveRings.classList.toggle('active', listening);
 
-      if (isListening) {
-        if (statusText) statusText.textContent = 'Listening… Speak clearly into your mic';
+      if (listening) {
+        if (statusText) statusText.textContent = 'Listening… Speak now';
+        statusText.style.color = '#5eead4';
       } else {
         if (statusText) statusText.textContent = 'Microphone off. Tap to speak.';
+        statusText.style.color = '';
         if (interimBox) interimBox.textContent = '';
       }
     }
@@ -73,174 +68,134 @@
       r.continuous = true;
       r.interimResults = true;
       r.maxAlternatives = 1;
-      r.lang = langSelect ? langSelect.value : state.lang;
+      r.lang = langSelect ? langSelect.value : currentLang;
 
-      r.onresult = function(event) {
-        let interim = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
+      r.onstart = function () {
+        updateUiState(true);
+      };
+
+      r.onresult = function (event) {
+        let interimText = '';
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
           const res = event.results[i];
           const transcript = res[0].transcript;
           if (res.isFinal) {
-            const trimmed = transcript.trim();
-            if (trimmed) {
-              const current = outputArea ? outputArea.value : '';
-              const separator = (current && !/\s$/.test(current)) ? ' ' : '';
-              const formatted = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
-              if (outputArea) {
-                outputArea.value = current + separator + formatted;
-                outputArea.scrollTop = outputArea.scrollHeight;
-              }
-            }
+            finalTranscript += transcript + ' ';
           } else {
-            interim += transcript;
+            interimText += transcript;
           }
         }
+
+        const fullDisplay = (finalTranscript + interimText).trim();
+        if (outputArea && fullDisplay) {
+          outputArea.value = fullDisplay;
+          outputArea.scrollTop = outputArea.scrollHeight;
+        }
+
         if (interimBox) {
-          interimBox.textContent = interim;
+          interimBox.textContent = interimText ? 'Speaking: ' + interimText : '';
+        }
+
+        if (statusText && isListening) {
+          statusText.textContent = 'Hearing speech…';
         }
       };
 
-      r.onerror = function(event) {
-        console.warn('STT Error:', event.error);
-        if (event.error === 'no-speech' || event.error === 'aborted') {
+      r.onerror = function (event) {
+        console.warn('SpeechRecognition error:', event.error);
+        if (event.error === 'no-speech') {
+          if (statusText && isListening) statusText.textContent = 'Listening… Speak clearly into your mic';
           return;
         }
-        if (event.error === 'not-allowed') {
-          if (statusText) statusText.textContent = 'Microphone permission blocked. Please allow mic access.';
+        if (event.error === 'aborted') {
+          return;
+        }
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          if (statusText) statusText.textContent = 'Microphone access denied. Please click the camera/mic icon in your address bar to allow.';
           stopListening();
         } else if (event.error === 'network') {
-          if (statusText) statusText.textContent = 'Network issue connecting to speech service.';
+          if (statusText) statusText.textContent = 'Network error connecting to speech recognition server.';
         } else {
           if (statusText) statusText.textContent = 'Speech error: ' + event.error;
         }
       };
 
-      r.onend = function() {
-        if (state.listening) {
-          // Keep continuous listening alive like Google voice search
-          state.restartTimer = setTimeout(() => {
-            if (state.listening && state.recognition) {
+      r.onend = function () {
+        if (isListening) {
+          // Keep listening continuously across pauses
+          restartTimer = setTimeout(() => {
+            if (isListening && recognition) {
               try {
-                state.recognition.start();
+                recognition.start();
               } catch (_) {}
             }
-          }, 200);
+          }, 150);
         } else {
-          updateUi(false);
-          stopAudioAnalyser();
+          updateUiState(false);
         }
       };
 
       return r;
     }
 
-    async function startAudioAnalyser() {
-      try {
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          state.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-          const AudioContext = window.AudioContext || window.webkitAudioContext;
-          state.audioCtx = new AudioContext();
-          if (state.audioCtx.state === 'suspended') {
-            await state.audioCtx.resume();
-          }
-          state.analyser = state.audioCtx.createAnalyser();
-          state.analyser.fftSize = 64;
-          const source = state.audioCtx.createMediaStreamSource(state.mediaStream);
-          source.connect(state.analyser);
-
-          const dataArray = new Uint8Array(state.analyser.frequencyBinCount);
-          const dotEls = document.querySelectorAll('.stt-dot');
-
-          function animateDots() {
-            if (!state.listening || !state.analyser) return;
-            state.analyser.getByteFrequencyData(dataArray);
-
-            let sum = 0;
-            for (let i = 0; i < dataArray.length; i++) {
-              sum += dataArray[i];
-            }
-            const avg = sum / dataArray.length;
-            const boost = Math.min(1.8, Math.max(0.2, avg / 30));
-
-            dotEls.forEach((dot, idx) => {
-              const freqVal = dataArray[(idx * 3) % dataArray.length] || avg;
-              const scaleY = Math.max(0.6, Math.min(2.4, (freqVal / 45) * boost));
-              dot.style.transform = `scaleY(${scaleY.toFixed(2)})`;
-            });
-
-            state.animFrame = requestAnimationFrame(animateDots);
-          }
-          animateDots();
-        }
-      } catch (err) {
-        // Fallback: pure CSS pulsing if audio visualizer fails
-        console.info('Audio visualizer fallback to CSS animation');
-      }
-    }
-
-    function stopAudioAnalyser() {
-      if (state.animFrame) {
-        cancelAnimationFrame(state.animFrame);
-        state.animFrame = null;
-      }
-      if (state.mediaStream) {
-        try {
-          state.mediaStream.getTracks().forEach(t => t.stop());
-        } catch (_) {}
-        state.mediaStream = null;
-      }
-      if (state.audioCtx) {
-        try {
-          state.audioCtx.close();
-        } catch (_) {}
-        state.audioCtx = null;
-      }
-      const dotEls = document.querySelectorAll('.stt-dot');
-      dotEls.forEach(dot => { dot.style.transform = ''; });
-    }
-
     function startListening() {
-      if (state.listening) return;
-      if (!state.recognition) {
-        state.recognition = createRecognizer();
+      if (isListening) return;
+      if (restartTimer) {
+        clearTimeout(restartTimer);
+        restartTimer = null;
       }
-      state.recognition.lang = langSelect ? langSelect.value : state.lang;
+
+      // Preserve any text the user manually typed or previously spoke
+      if (outputArea) {
+        finalTranscript = outputArea.value ? outputArea.value.trim() + ' ' : '';
+      }
+
       try {
-        state.recognition.start();
-        updateUi(true);
-        startAudioAnalyser();
+        if (!recognition) {
+          recognition = createRecognizer();
+        }
+        recognition.lang = langSelect ? langSelect.value : currentLang;
+        recognition.start();
+        updateUiState(true);
       } catch (err) {
         if (err.name === 'InvalidStateError') {
-          try { state.recognition.stop(); } catch (_) {}
+          // If already starting or stopping, reset recognizer instance
+          try { recognition.abort(); } catch (_) {}
+          recognition = createRecognizer();
           setTimeout(() => {
             try {
-              state.recognition.start();
-              updateUi(true);
-              startAudioAnalyser();
-            } catch (_) {}
-          }, 150);
+              recognition.start();
+              updateUiState(true);
+            } catch (e) {
+              console.error(e);
+            }
+          }, 100);
         } else {
-          console.error(err);
+          console.error('startListening error:', err);
           if (statusText) statusText.textContent = 'Could not start mic: ' + (err.message || err.name);
+          updateUiState(false);
         }
       }
     }
 
     function stopListening() {
-      state.listening = false;
-      if (state.restartTimer) {
-        clearTimeout(state.restartTimer);
-        state.restartTimer = null;
+      isListening = false;
+      if (restartTimer) {
+        clearTimeout(restartTimer);
+        restartTimer = null;
       }
-      if (state.recognition) {
-        try { state.recognition.stop(); } catch (_) {}
+      if (recognition) {
+        try {
+          recognition.stop();
+        } catch (_) {}
       }
-      stopAudioAnalyser();
-      updateUi(false);
+      updateUiState(false);
     }
 
-    micBtn.addEventListener('click', function() {
-      if (state.listening) {
+    micBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      if (isListening) {
         stopListening();
       } else {
         startListening();
@@ -248,18 +203,24 @@
     });
 
     if (langSelect) {
-      langSelect.addEventListener('change', function() {
-        state.lang = langSelect.value;
-        try { localStorage.setItem('sankeet_stt_lang', state.lang); } catch (_) {}
-        if (state.listening) {
+      langSelect.addEventListener('change', function () {
+        currentLang = langSelect.value;
+        try { localStorage.setItem('sankeet_stt_lang', currentLang); } catch (_) {}
+        if (isListening) {
           stopListening();
-          setTimeout(startListening, 300);
+          setTimeout(startListening, 250);
         }
       });
     }
 
+    if (outputArea) {
+      outputArea.addEventListener('input', function () {
+        finalTranscript = outputArea.value;
+      });
+    }
+
     if (copyBtn && outputArea) {
-      copyBtn.addEventListener('click', async function() {
+      copyBtn.addEventListener('click', async function () {
         const text = outputArea.value.trim();
         if (!text) return;
         try {
@@ -275,15 +236,16 @@
     }
 
     if (clearBtn && outputArea) {
-      clearBtn.addEventListener('click', function() {
+      clearBtn.addEventListener('click', function () {
         outputArea.value = '';
+        finalTranscript = '';
         if (interimBox) interimBox.textContent = '';
         outputArea.focus();
       });
     }
 
     if (speakBtn && outputArea) {
-      speakBtn.addEventListener('click', function() {
+      speakBtn.addEventListener('click', function () {
         const text = outputArea.value.trim();
         if (!text) return;
         if (window.SS_Speech && window.SS_Speech.speak) {
@@ -302,8 +264,8 @@
 
   window.SS_SpeechToText = {
     init: init,
-    start: () => { const b = document.getElementById('stt-mic-btn'); if (b && !state.listening) b.click(); },
-    stop: () => { const b = document.getElementById('stt-mic-btn'); if (b && state.listening) b.click(); }
+    start: () => { const b = document.getElementById('stt-mic-btn'); if (b && !isListening) b.click(); },
+    stop: () => { const b = document.getElementById('stt-mic-btn'); if (b && isListening) b.click(); }
   };
 
   if (document.readyState === 'loading') {
